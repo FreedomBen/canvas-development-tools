@@ -1,6 +1,6 @@
 #!/bin/bash
 
-scripts=('add-custom-gems.sh' 'generate-ctags.sh')
+scripts=('add-custom-gems.sh' 'generate-ctags.sh' 'create-database-config.sh' 'initialize-databases.sh')
 abs_path="$HOME/gitclone/canvas-development-tools"
 set_ruby_version="$abs_path/set-ruby-version.sh"
 
