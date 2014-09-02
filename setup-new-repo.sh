@@ -17,7 +17,7 @@ $set_ruby_version
 
 cd .  # reload chruby settings now that we have a ruby version
 gem install bundle
-bundle install
+bundle install --without mysql
 bundle update
 
 for i in ${scripts[@]}; do
