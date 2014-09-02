@@ -26,4 +26,5 @@ for i in ${scripts[@]}; do
     [ -x "$full_path" ] && $full_path
 done
 
+echo "Setup is complete.  You may see database creation errors if this is not the first Canvas you've set up on this system."
 
