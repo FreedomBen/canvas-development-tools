@@ -2,7 +2,7 @@
 
 die ()
 {
-    echo "[ERROR]: $1"
+    echo "[ERROR]: $0: $1"
     exit 1
 }
 
