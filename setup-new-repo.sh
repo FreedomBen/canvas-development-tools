@@ -26,3 +26,4 @@ for i in ${scripts[@]}; do
     [ -x "$full_path" ] && $full_path
 done
 
+
