@@ -11,5 +11,5 @@ die ()
 cat << __EOF__ > Gemfile.d/ben.rb
 gem 'awesome_print'
 gem 'colorize'
+gem 'wirb'
 __EOF__
-
