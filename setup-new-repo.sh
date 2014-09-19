@@ -1,5 +1,26 @@
 #!/bin/bash
 
+
+# BEGIN-NOTICE
+
+# Copyright (C) 2014  Benjamin Porter
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# END-NOTICE
+
+
 scripts=('add-custom-gems.sh' 'generate-ctags.sh' 'create-database-config.sh' 'initialize-databases.sh' 'build-assets')
 abs_path="$HOME/gitclone/canvas-development-tools"
 set_ruby_version="$abs_path/set-ruby-version.sh"
@@ -27,4 +48,3 @@ for i in ${scripts[@]}; do
 done
 
 echo "Setup is complete.  You may see database creation errors if this is not the first Canvas you've set up on this system."
-
