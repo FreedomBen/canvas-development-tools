@@ -486,21 +486,36 @@ generateCtags ()
     ctags -R --exclude=.git --exclude=log --languages=ruby . $(bundle list --paths | xargs)
 }
 
-installBundle ()
+installBundler ()
 {
-    green "Installing the bundle gem\n"
-    gem install bundle
+    if [ -n "$BUNDLE_VER" ]; then
+        green "Installing the bundle gem version $BUNDLE_VER\n"
+        gem install bundler -v "$BUNDLE_VER"
+    else
+        green "Installing the bundle gem newest version\n"
+        gem install bundler
+    fi
+
 }
 
 installGems ()
 {
     green "Installing bundler gems with bundle install (but no mysql)\n"
     bundle install --without mysql
+    if [ "$?" != "0" ]; then
+        if [ -z "$already_attempted" ] && $(bundle install --without mysql 2>&1 | grep "version .* is required" >/dev/null); then
+            already_attempted=y
+            BUNDLE_VER="$(bundle install --without mysql 2>&1 | awk '{print $3}')"
+            yes "Y" | gem uninstall bundler
+            installBundler
+            installGems
+        fi
+    fi
 }
 
 installRubyRI ()
 {
-    ruby-install ruby 2.1.2
+    ruby-install --no-reinstall ruby 2.1.2
     cd .
     ruby --version | grep "2\.1\.2" >/dev/null
 }
@@ -578,7 +593,7 @@ cloneCanvas || die "Error cloning Canvas.  Please check your network connection"
 cd "$canvaslocation" || die "Could not move to the newly cloned directory"
 if [[ $CHRUBY =~ [Yy] ]]; then writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; fi
 if [[ $CHRUBY =~ [Yy] ]]; then installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again"; fi
-installBundle || die "Error install bundle.  Please install bundle manually and try again"
+installBundler || die "Error install bundle.  Please install bundle manually and try again"
 installGems || die "Error installing required gems.  Please run 'bundle install' manually and try again"
 buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again"
 createDatabaseConfigFile || die "Error creating the database config files"
