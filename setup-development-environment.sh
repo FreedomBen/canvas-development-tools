@@ -51,6 +51,11 @@ red ()
     echo -ne "${red}${1}${restore}"
 }
 
+yellow ()
+{
+    echo -ne "${yellow}${1}${restore}"
+}
+
 runningOSX ()
 {
     uname -a | grep "Darwin" > /dev/null 2>&1
@@ -124,6 +129,40 @@ runningUnsupported ()
     fi
 }
 
+chrubySupported ()
+{
+    if runningOSX; then
+        return 0
+    elif runningFedora; then
+        return 1
+    elif runningUbuntu; then
+        return 1
+    elif runningArch; then
+        return 0
+    elif runningMint; then
+        return 1
+    else
+        return 1
+    fi
+}
+
+rubyInstallSupported ()
+{
+    if runningOSX; then
+        return 0
+    elif runningFedora; then
+        return 1
+    elif runningUbuntu; then
+        return 1
+    elif runningArch; then
+        return 0
+    elif runningMint; then
+        return 1
+    else
+        return 1
+    fi
+}
+
 installDistroDependencies ()
 {
     green "Installing any distro specific dependencies\n"
@@ -135,7 +174,8 @@ installDistroDependencies ()
     elif runningUbuntu; then
         :
     elif runningArch; then
-        sudo pacman -S --needed --noconfirm lsb-release 
+        sudo pacman -S --needed --noconfirm lsb-release
+        sudo pacman -S --needed --noconfirm curl
     elif runningMint; then
         :
     else
@@ -172,7 +212,13 @@ aurinstall ()
 
 hasBrew ()
 {
-    which brew >/dev/null 2>&1
+    if $(which brew >/dev/null 2>&1); then
+        green "Brew is installed\n"
+        return 0
+    else
+        yellow "Brew is NOT installed\n"
+        return 1
+    fi
 }
 
 installBrew ()
@@ -188,7 +234,13 @@ installBrew ()
 
 hasRuby ()
 {
-    which ruby >/dev/null 2>&1
+    if $(which ruby >/dev/null 2>&1); then
+        green "Ruby is installed\n"
+        return 0
+    else
+        yellow "Ruby is NOT installed\n"
+        return 1
+    fi
 }
 
 installRuby ()
@@ -212,7 +264,13 @@ installRuby ()
 
 hasNodejs ()
 {
-    which npm >/dev/null 2>&1
+    if $(which npm >/dev/null 2>&1); then
+        green "Nodejs is installed\n"
+        return 0
+    else
+        yellow "Nodejs is NOT installed\n"
+        return 1
+    fi
 }
 
 installNodejs ()
@@ -236,14 +294,22 @@ installNodejs ()
 
 hasChruby ()
 {
-    which chruby >/dev/null 2>&1
+    if $(type chruby | grep "chruby is a function" >/dev/null 2>&1); then
+        green "Chruby is installed\n"
+        return 0
+    else
+        yellow "Chruby is NOT installed\n"
+        return 1
+    fi
 }
 
 installChruby ()
 {
+    # ruby-install is installed in a separate method
     if ! hasChruby; then
         if runningOSX; then
             brew install chruby
+            echo ". /usr/local/share/chruby/chruby.sh" >> ~/.bash_profile
         elif runningFedora; then
             :
         elif runningUbuntu; then
@@ -253,6 +319,22 @@ installChruby ()
         elif runningMint; then
             :
         fi
+        echo "" >> ~/.bashrc
+        echo "# Added by the canvas-lms setup script" >> ~/.bashrc
+        echo "# These settings make chruby work" >> ~/.bashrc
+        echo "# See https://github.com/postmodern/chruby" >> ~/.bashrc
+
+        [ -f /usr/local/share/chruby/chruby.sh ] && echo ". /usr/local/share/chruby/chruby.sh" >> ~/.bashrc
+        [ -f /usr/local/share/chruby/auto.sh ] && echo ". /usr/local/share/chruby/auto.sh" >> ~/.bashrc
+        [ -f /usr/share/chruby/chruby.sh ] && echo ". /usr/share/chruby/chruby.sh" >> ~/.bashrc
+        [ -f /usr/share/chruby/auto.sh ] && echo ". /usr/share/chruby/auto.sh" >> ~/.bashrc
+        echo "PATH=$PATH:TODO" >> ~/.bashrc
+
+        # source now so chruby works immediately
+        [ -f /usr/local/share/chruby/chruby.sh ] && . /usr/local/share/chruby/chruby.sh
+        [ -f /usr/local/share/chruby/auto.sh ] && . /usr/local/share/chruby/auto.sh
+        [ -f /usr/share/chruby/chruby.sh ] && . /usr/share/chruby/chruby.sh
+        [ -f /usr/share/chruby/auto.sh ] && . /usr/share/chruby/auto.sh
     fi
 
     hasChruby
@@ -260,7 +342,13 @@ installChruby ()
 
 hasRubyinstall ()
 {
-    which ruby-install >/dev/null 2>&1
+    if $(which ruby-install >/dev/null 2>&1); then
+        green "Ruby-install is installed\n"
+        return 0
+    else
+        yellow "Ruby-install is NOT installed\n"
+        return 1
+    fi
 }
 
 installRubyinstall ()
@@ -291,7 +379,13 @@ writeChrubyFile ()
 
 hasPostgres ()
 {
-    which psql >/dev/null 2>&1
+    if $(which psql >/dev/null 2>&1); then
+        green "PostgreSQL is installed\n"
+        return 0
+    else
+        yellow "PostgreSQL is NOT installed\n"
+        return 1
+    fi
 }
 
 installPostgres ()
@@ -315,22 +409,28 @@ installPostgres ()
 
 hasGit ()
 {
-    which git >/dev/null 2>&1
+    if $(which git >/dev/null 2>&1); then
+        green "Git is installed\n"
+        return 0
+    else
+        yellow "Git is NOT installed"
+        return 1
+    fi
 }
 
 installGit ()
 {
     if ! hasGit; then
         if runningOSX; then
-            echo TODO
+            echo # TODO
         elif runningFedora; then
-            sudo yum -y install ruby
+            sudo yum -y install git
         elif runningUbuntu; then
-            sudo apt-get -y install ruby
+            sudo apt-get -y install git
         elif runningArch; then
-            sudo pacman -S --needed --noconfirm ruby
+            sudo pacman -S --needed --noconfirm git
         elif runningMint; then
-            sudo apt-get -y install ruby
+            sudo apt-get -y install git
         fi
     fi
 
@@ -339,7 +439,19 @@ installGit ()
 
 cloneCanvas ()
 {
-    cd "$canvasdir" && git clone https://github.com/instructure/canvas-lms.git
+    cd "$canvasdir" 
+    if [ -d canvas-lms ]; then 
+        blue "You may already have a canvas checkout (the directory exists).\n"
+        blue "Delete it and reclone? (Y/N): "
+        read RESP
+        if [[ $RESP =~ [Yy] ]]; then
+            rm -rf canvas-lms
+        else
+            return 0
+        fi
+    fi
+
+    git clone https://github.com/instructure/canvas-lms.git
 }
 
 buildCanvasAssets ()
@@ -384,6 +496,13 @@ installGems ()
 {
     green "Installing bundler gems with bundle install (but no mysql)\n"
     bundle install --without mysql
+}
+
+installRubyRI ()
+{
+    ruby-install ruby 2.1.2
+    cd .
+    ruby --version | grep "2\.1\.2" >/dev/null
 }
 
 read -r -d '' VAR << __EOF__
@@ -437,8 +556,13 @@ read newcanvasdir
 mkdir -p "$canvasdir"
 [ -d "$canvasdir" ] || die "Could not create directory \"$canvasdir\""
 
-blue "Do you want to use chruby (recommended)? (Y/N): "
-read CHRUBY
+if chrubySupported; then
+    blue "Do you want to use chruby and ruby-install (recommended)? (Y/N): "
+    read CHRUBY
+else
+    CHRUBY=N
+fi
+
 blue "Do you want to generate ctags? (Y/N): "
 read CTAGS
 
@@ -447,12 +571,13 @@ installRuby || die "Error installing Ruby on your system.  Please install manual
 installNodejs || die "Error installing Node.js on your system.  Please install manually and try again"
 installBrew || die "Error installing Home Brew on your system.  Please install manually and try again"
 if [[ $CHRUBY =~ [Yy] ]]; then installChruby || die "Error installing Chruby on your system.  Please install manually and try again"; fi
+if [[ $CHRUBY =~ [Yy] ]]; then installRubyinstall || die "Error installing Chruby on your system.  Please install manually and try again"; fi
 installPostgres || die "Error installing Postgres on your system.  Please install manually and try again"
 installGit || die "Error installing Git on your system.  Please install manually and try again"
-cloneCanvas || die "Error cloning Canvas.  Please install manually and try again"
+cloneCanvas || die "Error cloning Canvas.  Please check your network connection"
 cd "$canvaslocation" || die "Could not move to the newly cloned directory"
-if [[ $CHRUBY =~ [Yy] ]]; then writeChruby || die "Error writing Chruby file to your repo.  Please install manually and try again"; fi
-cd "$canvaslocation" || die "Could not move to the newly cloned directory"
+if [[ $CHRUBY =~ [Yy] ]]; then writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; fi
+if [[ $CHRUBY =~ [Yy] ]]; then installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again"; fi
 installBundle || die "Error install bundle.  Please install bundle manually and try again"
 installGems || die "Error installing required gems.  Please run 'bundle install' manually and try again"
 buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again"
