@@ -176,6 +176,7 @@ installDistroDependencies ()
     elif runningArch; then
         sudo pacman -S --needed --noconfirm lsb-release
         sudo pacman -S --needed --noconfirm curl
+        sudo pacman -S --needed --noconfirm libxslt
     elif runningMint; then
         :
     else
@@ -303,13 +304,37 @@ hasChruby ()
     fi
 }
 
+addChrubySourcingToFile ()
+{
+    f="$HOME/.bashrc"
+    [ -n "$1" ] && f="$1"
+
+    if [ -f "$f" ] && $(cat "$f" | egrep "Added by the canvas.lms setup script"); then
+         yellow "Bashrc already has sourcing commands for chruby\n"
+    else
+        echo "" >> "$f"
+        echo "# Added by the canvas-lms setup script" >> "$f"
+        echo "# These settings make chruby work" >> "$f"
+        echo "# See https://github.com/postmodern/chruby" >> "$f"
+
+        [ -f /usr/local/share/chruby/chruby.sh ] && \
+            echo "[ -f /usr/local/share/chruby/chruby.sh ] && . /usr/local/share/chruby/chruby.sh" >> "$f"
+        [ -f /usr/local/share/chruby/auto.sh ] && \
+            echo "[ -f /usr/local/share/chruby/auto.sh ] && . /usr/local/share/chruby/auto.sh" >> "$f"
+        [ -f /usr/share/chruby/chruby.sh ] && \
+            echo "[ -f /usr/share/chruby/chruby.sh ] && . /usr/share/chruby/chruby.sh" >> "$f"
+        [ -f /usr/share/chruby/auto.sh ] && \
+            echo "[ -f /usr/share/chruby/auto.sh ] && . /usr/share/chruby/auto.sh" >> "$f"
+    fi
+}
+
 installChruby ()
 {
     # ruby-install is installed in a separate method
     if ! hasChruby; then
         if runningOSX; then
             brew install chruby
-            echo ". /usr/local/share/chruby/chruby.sh" >> ~/.bash_profile
+            addChrubySourcingToFile "$HOME/.bash_profile"
         elif runningFedora; then
             :
         elif runningUbuntu; then
@@ -319,16 +344,8 @@ installChruby ()
         elif runningMint; then
             :
         fi
-        echo "" >> ~/.bashrc
-        echo "# Added by the canvas-lms setup script" >> ~/.bashrc
-        echo "# These settings make chruby work" >> ~/.bashrc
-        echo "# See https://github.com/postmodern/chruby" >> ~/.bashrc
 
-        [ -f /usr/local/share/chruby/chruby.sh ] && echo ". /usr/local/share/chruby/chruby.sh" >> ~/.bashrc
-        [ -f /usr/local/share/chruby/auto.sh ] && echo ". /usr/local/share/chruby/auto.sh" >> ~/.bashrc
-        [ -f /usr/share/chruby/chruby.sh ] && echo ". /usr/share/chruby/chruby.sh" >> ~/.bashrc
-        [ -f /usr/share/chruby/auto.sh ] && echo ". /usr/share/chruby/auto.sh" >> ~/.bashrc
-        echo "PATH=$PATH:TODO" >> ~/.bashrc
+        addChrubySourcingToFile
 
         # source now so chruby works immediately
         [ -f /usr/local/share/chruby/chruby.sh ] && . /usr/local/share/chruby/chruby.sh
@@ -454,11 +471,14 @@ cloneCanvas ()
     git clone https://github.com/instructure/canvas-lms.git
 }
 
-buildCanvasAssets ()
+installNpmPackages ()
 {
     green "Installing required npm assets\n"
     sudo npm install
+}
 
+buildCanvasAssets ()
+{
     green "Compiling Canvas assets\n"
     bundle exec rake canvas:compile_assets
 }
@@ -486,29 +506,59 @@ generateCtags ()
     ctags -R --exclude=.git --exclude=log --languages=ruby . $(bundle list --paths | xargs)
 }
 
+hasBundler ()
+{
+    if $(which bundler >/dev/null 2>&1); then
+        green "Bundler is installed\n"
+        return 0
+    else
+        yellow "Bundler is NOT installed\n"
+        return 1
+    fi
+}
+
 installBundler ()
 {
+    # Install the latest version possible and set BUNDLE_VER
+    
+    # Try to read the bundler version straight from the gem file
+    [ -d Gemfile.d/_before ] && \
+    BUNDLE_VER=$(ruby -e "$(cat Gemfile.d/_before.rb | grep required_bundler_version | head -1); puts \"#{required_bundler_version.last}\"")
+
     if [ -n "$BUNDLE_VER" ]; then
         green "Installing the bundle gem version $BUNDLE_VER\n"
         gem install bundler -v "$BUNDLE_VER"
-    else
+    elif ! hasBundler; then
         green "Installing the bundle gem newest version\n"
         gem install bundler
     fi
-
+    
+    hasBundler
 }
 
 installGems ()
 {
     green "Installing bundler gems with bundle install (but no mysql)\n"
-    bundle install --without mysql
+    if [ -n "$BUNDLE_VER" ]; then
+        bundle _${BUNDLE_VER}_ install --without mysql
+    else
+        bundle install --without mysql
+    fi
+
     if [ "$?" != "0" ]; then
         if [ -z "$already_attempted" ] && $(bundle install --without mysql 2>&1 | grep "version .* is required" >/dev/null); then
             already_attempted=y
             BUNDLE_VER="$(bundle install --without mysql 2>&1 | awk '{print $3}')"
-            yes "Y" | gem uninstall bundler
+
+            if $(gem list --local | egrep "bundle.*," >/dev/null); then
+                echo -e "${purple}Uninstalling bundler all${restore}\n"
+                echo -e "3\ny\ny\ny\ny\ny\ny" | gem uninstall bundler
+            else
+                yes "Y" | gem uninstall bundler
+            fi
+
             installBundler
-            installGems
+            installGems # recursive
         fi
     fi
 }
@@ -585,17 +635,18 @@ installDistroDependencies
 installRuby || die "Error installing Ruby on your system.  Please install manually and try again"
 installNodejs || die "Error installing Node.js on your system.  Please install manually and try again"
 installBrew || die "Error installing Home Brew on your system.  Please install manually and try again"
-if [[ $CHRUBY =~ [Yy] ]]; then installChruby || die "Error installing Chruby on your system.  Please install manually and try again"; fi
-if [[ $CHRUBY =~ [Yy] ]]; then installRubyinstall || die "Error installing Chruby on your system.  Please install manually and try again"; fi
+[[ $CHRUBY =~ [Yy] ]] && { installChruby || die "Error installing Chruby on your system.  Please install manually and try again"; }
+[[ $CHRUBY =~ [Yy] ]] && { installRubyinstall || die "Error installing Chruby on your system.  Please install manually and try again"; }
 installPostgres || die "Error installing Postgres on your system.  Please install manually and try again"
 installGit || die "Error installing Git on your system.  Please install manually and try again"
 cloneCanvas || die "Error cloning Canvas.  Please check your network connection"
 cd "$canvaslocation" || die "Could not move to the newly cloned directory"
-if [[ $CHRUBY =~ [Yy] ]]; then writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; fi
-if [[ $CHRUBY =~ [Yy] ]]; then installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again"; fi
+[[ $CHRUBY =~ [Yy] ]] && { writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; }
+[[ $CHRUBY =~ [Yy] ]] && { installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again"; }
 installBundler || die "Error install bundle.  Please install bundle manually and try again"
 installGems || die "Error installing required gems.  Please run 'bundle install' manually and try again"
+installNpmPackages || die "Error installing npm packages.  Please run 'npm install' manually and try again"
 buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again"
 createDatabaseConfigFile || die "Error creating the database config files"
 createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again"
-if [[ $CTAGS =~ [Yy] ]]; then generateCtags || die "Error generating ctags"; fi
+[[ $CTAGS =~ [Yy] ]] && { generateCtags || die "Error generating ctags"; }
