@@ -177,6 +177,7 @@ installDistroDependencies ()
         sudo pacman -S --needed --noconfirm lsb-release
         sudo pacman -S --needed --noconfirm curl
         sudo pacman -S --needed --noconfirm libxslt
+        sudo pacman -S --needed --noconfirm python2
     elif runningMint; then
         :
     else
@@ -474,7 +475,11 @@ cloneCanvas ()
 installNpmPackages ()
 {
     green "Installing required npm assets\n"
-    sudo npm install
+    if runningArch; then
+        sudo npm install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
+    else
+        sudo npm install
+    fi
 }
 
 buildCanvasAssets ()
