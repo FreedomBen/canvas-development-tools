@@ -29,7 +29,7 @@ die ()
 
 [ -d .git/hooks ] || die "Not in correct place.  Could not find .git/hooks dir"
 
-cat << "__EOF__" > .git/hook/commit-msg
+cat << "__EOF__" > .git/hooks/commit-msg
 #!/bin/sh
 # From Gerrit Code Review 2.8.5
 #
@@ -214,4 +214,4 @@ add_ChangeId
 
 __EOF__
 
-[ -f .git/hook/commit-msg ] && chmod +x .git/hook/commit-msg
+[ -f .git/hooks/commit-msg ] && chmod +x .git/hooks/commit-msg
