@@ -21,7 +21,7 @@
 # END-NOTICE
 
 
-scripts=('add-custom-gems.sh' 'generate-ctags.sh' 'create-database-config.sh' 'initialize-databases.sh' 'build-assets')
+scripts=('add-custom-gems.sh' 'generate-ctags.sh' 'create-database-config.sh' 'initialize-databases.sh' 'build-assets.sh' 'add-gerrit-hook.sh')
 abs_path="$HOME/gitclone/canvas-development-tools"
 set_ruby_version="$abs_path/set-ruby-version.sh"
 
@@ -44,6 +44,8 @@ bundle update
 for i in ${scripts[@]}; do
     echo "Running $i"
     full_path="$abs_path/$i"
+    [ ! -f "$full_path" ] && echo "Could not find $full_path"
+    [ ! -x "$full_path" ] && echo "Could not run $full_path because it is not exectuable"
     [ -x "$full_path" ] && $full_path
 done
 
