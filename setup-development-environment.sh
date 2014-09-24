@@ -425,6 +425,26 @@ installPostgres ()
     hasPostgres
 }
 
+configurePostgres ()
+{
+    if ! hasPostgres; then
+        installPostgres
+    fi
+
+    if ! hasPostgres; then
+        red "Could not configure Postgres because it does not appear to be installed\n"
+        return 1
+    fi
+
+    if ! runningOSX; then
+        # make sure there is a postgres user
+        sudo useradd --no-create-home --system postgres
+        sudo -u postgres initdb /var/lib/postgres/data -E utf8
+        pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
+        sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
+    fi
+}
+
 hasGit ()
 {
     if $(which git >/dev/null 2>&1); then
@@ -500,9 +520,21 @@ createDatabases ()
     if $(which createdb >/dev/null 2>&1); then
         createdb canvas_development
         createdb canvas_queue_development
+        createdb canvas_test
     else
         return 1
     fi
+}
+
+populateDatabases ()
+{
+    bundle exec rake db:initial_setup
+
+    # Required for running tests
+    psql -c 'CREATE USER canvas' -d canvas_test
+    psql -c 'GRANT ALL PRIVILEGES ON DATABASE canvas_test TO canvas' -d canvas_test
+    psql -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO canvas' -d canvas_test
+    psql -c 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO canvas' -d canvas_test
 }
 
 generateCtags ()
@@ -636,6 +668,7 @@ fi
 blue "Do you want to generate ctags? (Y/N): "
 read CTAGS
 
+
 installDistroDependencies
 installRuby || die "Error installing Ruby on your system.  Please install manually and try again"
 installNodejs || die "Error installing Node.js on your system.  Please install manually and try again"
@@ -643,6 +676,7 @@ installBrew || die "Error installing Home Brew on your system.  Please install m
 [[ $CHRUBY =~ [Yy] ]] && { installChruby || die "Error installing Chruby on your system.  Please install manually and try again"; }
 [[ $CHRUBY =~ [Yy] ]] && { installRubyinstall || die "Error installing Chruby on your system.  Please install manually and try again"; }
 installPostgres || die "Error installing Postgres on your system.  Please install manually and try again"
+configurePostgres || die "Error configuring Postgres on your system.  Please configure manually and try again"
 installGit || die "Error installing Git on your system.  Please install manually and try again"
 cloneCanvas || die "Error cloning Canvas.  Please check your network connection"
 cd "$canvaslocation" || die "Could not move to the newly cloned directory"
@@ -654,4 +688,5 @@ installNpmPackages || die "Error installing npm packages.  Please run 'npm insta
 buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again"
 createDatabaseConfigFile || die "Error creating the database config files"
 createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again"
+populateDatabases || die "Error populating the databases"
 [[ $CTAGS =~ [Yy] ]] && { generateCtags || die "Error generating ctags"; }
