@@ -21,6 +21,7 @@ white='\033[1;37m'
 
 
 MAINTAINER_EMAIL='bporter@instructure.com'
+RUBY_VER='2.1.2'
 
 canvasdir="$HOME"
 canvaslocation="$canvasdir/canvas-lms"
@@ -168,7 +169,10 @@ installDistroDependencies ()
     green "Installing any distro specific dependencies\n"
 
     if runningOSX; then
-        :
+        if ! $(which gcc >/dev/null 2>&1); then
+            blue "We're going to install the OS X command line tools.  You will have to agree to Apple's terms\n"
+            xcode-select --install
+        fi
     elif runningFedora; then
         :
     elif runningUbuntu; then
@@ -182,6 +186,19 @@ installDistroDependencies ()
         :
     else
         :
+    fi
+}
+
+setLocale ()
+{
+    if runningArch && ! $(locale | grep "LANG=en_US.UTF-8" >/dev/null 2>&1); then
+        blue "Your locale is not currently set to en_US.UTF-8.\n"
+        blue "Press <Enter> and I'll change it for you, or Ctrl+C to quit\n"
+        read
+        echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+        locale-gen
+        echo "LANG=en_US.UTF-8" > /etc/locale.conf
+        . /etc/locale.conf
     fi
 }
 
@@ -296,7 +313,7 @@ installNodejs ()
 
 hasChruby ()
 {
-    if $(type chruby | grep "chruby is a function" >/dev/null 2>&1); then
+    if $(type chruby 2>&1 | grep "chruby is a function" >/dev/null 2>&1); then
         green "Chruby is installed\n"
         return 0
     else
@@ -310,7 +327,7 @@ addChrubySourcingToFile ()
     f="$HOME/.bashrc"
     [ -n "$1" ] && f="$1"
 
-    if [ -f "$f" ] && $(cat "$f" | egrep "Added by the canvas.lms setup script"); then
+    if [ -f "$f" ] && $(cat "$f" | egrep "Added by the canvas.lms setup script" >/dev/null 2>&1); then
          yellow "Bashrc already has sourcing commands for chruby\n"
     else
         echo "" >> "$f"
@@ -390,9 +407,9 @@ installRubyinstall ()
 
 writeChrubyFile ()
 {
-    RUBY_VERSION="ruby-2.1.2"
-    green "Writing Ruby version \"$RUBY_VERSION\" to file\n"
-    echo "$RUBY_VERSION" > .ruby-version
+    CHRUBY_VERSION="ruby-$RUBY_VER"
+    green "Writing Ruby version \"$CHRUBY_VERSION\" to file\n"
+    echo "$CHRUBY_VERSION" > .ruby-version
 }
 
 hasPostgres ()
@@ -410,7 +427,7 @@ installPostgres ()
 {
     if ! hasPostgres; then
         if runningOSX; then
-            echo TODO
+            brew install postgresql
         elif runningFedora; then
             sudo yum -y install postgresql
         elif runningUbuntu; then
@@ -439,10 +456,46 @@ configurePostgres ()
     if ! runningOSX; then
         # make sure there is a postgres user
         sudo useradd --no-create-home --system postgres
-        sudo -u postgres initdb /var/lib/postgres/data -E utf8
+        sudo mkdir -p /var/{lib,log}/postgres
+        sudo chown postgres /var/{lib,log}/postgres
+        sudo -u postgres initdb --locale en_US.UTF-8 -E UTF8 -D /var/lib/postgres/data
         sudo -u postgres pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
-        sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
+
+        # Give PG some time to start up ..
+        blue "Waiting 5 seconds for the PostgreSQL server to start...\n"
+        sleep 5
+        if ! $(sudo -u postgres psql postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$(whoami)'" | grep "1" >/dev/null); then
+            sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
+        fi
+        sudo -u postgres pg_ctl -D /var/lib/postgres/data stop
     fi
+
+    if runningArch || runningFedora; then
+        sudo systemctl enable postgresql.service
+    fi
+}
+
+postgresRunning ()
+{
+    if runningArch || runningFedora; then
+        systemctl status postgresql.service
+    else
+        # TODO
+        return 1
+    fi
+}
+
+startPostgres ()
+{
+    if ! postgresRunning; then
+        if runningArch || runningFedora; then
+            sudo systemctl start postgresql
+        else
+            pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
+        fi
+    fi
+
+    postgresRunning
 }
 
 hasGit ()
@@ -460,7 +513,7 @@ installGit ()
 {
     if ! hasGit; then
         if runningOSX; then
-            echo # TODO
+            brew install git
         elif runningFedora; then
             sudo yum -y install git
         elif runningUbuntu; then
@@ -602,9 +655,9 @@ installGems ()
 
 installRubyRI ()
 {
-    ruby-install --no-reinstall ruby 2.1.2
+    ruby-install --no-reinstall ruby $RUBY_VER
     cd .
-    ruby --version | grep "2\.1\.2" >/dev/null
+    ruby --version | grep "$(echo $RUBY_VER | sed -e 's/\./\\./g')" >/dev/null
 }
 
 read -r -d '' VAR << __EOF__
@@ -670,6 +723,7 @@ read CTAGS
 
 
 installDistroDependencies
+setLocale
 installRuby || die "Error installing Ruby on your system.  Please install manually and try again"
 installNodejs || die "Error installing Node.js on your system.  Please install manually and try again"
 installBrew || die "Error installing Home Brew on your system.  Please install manually and try again"
@@ -687,6 +741,7 @@ installGems || die "Error installing required gems.  Please run 'bundle install'
 installNpmPackages || die "Error installing npm packages.  Please run 'npm install' manually and try again"
 buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again"
 createDatabaseConfigFile || die "Error creating the database config files"
-createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again"
+startPostgres || die "Error starting PostgreSQL.  Please make sure it is installed and try again"
+createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again.  You may need to run 'sudo killall postgres' to nuke any running servers that are interfering"
 populateDatabases || die "Error populating the databases"
 [[ $CTAGS =~ [Yy] ]] && { generateCtags || die "Error generating ctags"; }
