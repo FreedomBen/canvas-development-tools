@@ -440,7 +440,7 @@ configurePostgres ()
         # make sure there is a postgres user
         sudo useradd --no-create-home --system postgres
         sudo -u postgres initdb /var/lib/postgres/data -E utf8
-        pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
+        sudo -u postgres pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
         sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
     fi
 }
