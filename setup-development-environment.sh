@@ -37,14 +37,19 @@ die ()
     exit 1
 }
 
+white ()
+{
+    echo -ne "${white}${1}${restore}"
+}
+
 green ()
 {
     echo -ne "${green}${1}${restore}"
 }
 
-blue ()
+cyan ()
 {
-    echo -ne "${blue}${1}${restore}"
+    echo -ne "${cyan}${1}${restore}"
 }
 
 red ()
@@ -170,8 +175,11 @@ installDistroDependencies ()
 
     if runningOSX; then
         if ! $(which gcc >/dev/null 2>&1); then
-            blue "We're going to install the OS X command line tools.  You will have to agree to Apple's terms\n"
+            cyan "We're going to install the OS X command line tools.  You will have to agree to Apple's terms\n"
             xcode-select --install
+            cyan "Press <Enter> to continue after the command line tools are installed: "
+        else
+            green "XCode command line tools are installed\n"
         fi
     elif runningFedora; then
         :
@@ -192,8 +200,8 @@ installDistroDependencies ()
 setLocale ()
 {
     if runningArch && ! $(locale | grep "LANG=en_US.UTF-8" >/dev/null 2>&1); then
-        blue "Your locale is not currently set to en_US.UTF-8.\n"
-        blue "Press <Enter> and I'll change it for you, or Ctrl+C to quit\n"
+        cyan "Your locale is not currently set to en_US.UTF-8.\n"
+        cyan "Press <Enter> and I'll change it for you, or Ctrl+C to quit\n"
         read
         echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
         locale-gen
@@ -244,9 +252,33 @@ installBrew ()
 {
     if runningOSX; then
         if ! hasBrew; then
-            sudo ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+            ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+            read -r -d '' VAR << "__EOF__"
+# Added by canvas-lms setup-development script
+# This adds the brew bin to your PATH
+if $(which brew >/dev/null 2>&1); then
+    export PATH="$PATH:$(brew --prefix)/bin"
+fi
+__EOF__
+
+            yellow "You will need to have '$(brew --prefix)/opt/coreutils/libexec/gnubin\n in your PATH variable in order to run brew programs.\n"
+            yellow "This can be done easily by adding these lines of code to ~/.bash_profile:\n\n"
+            white "$VAR\n\n"
+            yellow "Do this now?  (If not make sure you do it manually) (Y/N): "
+            read addLines
+
+            if [[ $addLines =~ [yY] ]]; then
+                echo "" >> ~/.bash_profile
+                echo "$VAR" >> ~/.bash_profile
+            fi
         fi
 
+        # make sure brew stuff is in our path
+        if ! $(echo "$PATH" | sed -e 's/:/\n/g' | grep "$(brew --prefix)/opt/coreutils" >/dev/null 2>&1); then
+            yellow "Brew bin is not in PATH. Adding...\n"
+            export PATH="$PATH:$(brew --prefix)/bin"   
+            white "New PATH is '$PATH'\n"
+        fi
         hasBrew
     fi
 }
@@ -266,7 +298,7 @@ installRuby ()
 {
     if ! $(which ruby > /dev/null 2>&1); then
         if $(runningOSX); then
-            echo TODO
+            brew install ruby
         elif $(runningFedora); then
             sudo yum -y install ruby
         elif $(runningUbuntu); then
@@ -283,7 +315,7 @@ installRuby ()
 
 hasNodejs ()
 {
-    if $(which npm >/dev/null 2>&1); then
+    if $(which node >/dev/null 2>&1) && $(which npm >/dev/null 2>&1); then
         green "Nodejs is installed\n"
         return 0
     else
@@ -296,7 +328,7 @@ installNodejs ()
 {
     if ! hasNodejs; then
         if runningOSX; then
-            echo TODO
+            brew install node
         elif runningFedora; then
             sudo yum -y install nodejs
         elif runningUbuntu; then
@@ -462,7 +494,7 @@ configurePostgres ()
         sudo -u postgres pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
 
         # Give PG some time to start up ..
-        blue "Waiting 5 seconds for the PostgreSQL server to start...\n"
+        cyan "Waiting 5 seconds for the PostgreSQL server to start...\n"
         sleep 5
         if ! $(sudo -u postgres psql postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$(whoami)'" | grep "1" >/dev/null); then
             sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
@@ -480,8 +512,7 @@ postgresRunning ()
     if runningArch || runningFedora; then
         systemctl status postgresql.service
     else
-        # TODO
-        return 1
+        ps auxwww | grep -E "postgres\s-D" >/dev/null 2>&1
     fi
 }
 
@@ -532,8 +563,8 @@ cloneCanvas ()
 {
     cd "$canvasdir" 
     if [ -d canvas-lms ]; then 
-        blue "You may already have a canvas checkout (the directory exists).\n"
-        blue "Delete it and reclone? (Y/N): "
+        cyan "You may already have a canvas checkout (the directory exists).\n"
+        cyan "Delete it and reclone? (Y/N): "
         read RESP
         if [[ $RESP =~ [Yy] ]]; then
             rm -rf canvas-lms
@@ -542,7 +573,7 @@ cloneCanvas ()
         fi
     fi
 
-    git clone https://github.com/instructure/canvas-lms.git
+    git clone $CLONE_URL
 }
 
 installNpmPackages ()
@@ -568,32 +599,83 @@ createDatabaseConfigFile ()
     done
 }
 
+databaseExists ()
+{
+    if $(psql -lqt | cut -d \| -f 1 | grep -w "$1" >/dev/null 2>&1); then
+        green "PostgreSQL database '$1' exists\n"
+        return 0
+    else
+        yellow "PostgreSQL database '$1' DOES NOT exist\n"
+        return 1
+    fi
+}
+
 createDatabases ()
 {
     if $(which createdb >/dev/null 2>&1); then
-        createdb canvas_development
-        createdb canvas_queue_development
-        createdb canvas_test
+        databaseExists "canvas_development" || createdb canvas_development
+        databaseExists "canvas_queue_development" || createdb canvas_queue_development
+        databaseExists "canvas_test" || createdb canvas_test
     else
+        red "The binary 'createdb' is not in PATH.  Make sure PostgreSQL is installed correctly\n"
         return 1
     fi
 }
 
 populateDatabases ()
 {
+    createDatabases
+
     bundle exec rake db:initial_setup
 
     # Required for running tests
-    psql -c 'CREATE USER canvas' -d canvas_test
-    psql -c 'GRANT ALL PRIVILEGES ON DATABASE canvas_test TO canvas' -d canvas_test
-    psql -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO canvas' -d canvas_test
-    psql -c 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO canvas' -d canvas_test
+    if databaseExists "canvas_test"; then
+        psql -c 'CREATE USER canvas' -d canvas_test
+        psql -c 'GRANT ALL PRIVILEGES ON DATABASE canvas_test TO canvas' -d canvas_test
+        psql -c 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO canvas' -d canvas_test
+        psql -c 'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO canvas' -d canvas_test
+    else
+        red "The test dabases \"canvas_test\" does not exist.  Could not set it up\n"
+        return 1
+    fi
+}
+
+hasCtags ()
+{
+    if $(which ctags >/dev/null 2>&1); then
+        green "ctags is installed\n"
+        return 0
+    else
+        yellow "ctags is NOT installed\n"
+        return 1
+    fi
+}
+
+installCtags ()
+{
+    if ! hasCtags; then
+        if runningOSX; then
+            brew install ctags
+        elif runningFedora; then
+            sudo yum -y install ctags
+        elif runningUbuntu; then
+            sudo apt-get -y install ctags
+        elif runningArch; then
+            sudo pacman -S --needed --noconfirm ctags
+        elif runningMint; then
+            sudo apt-get -y install ctags
+        fi
+    fi
 }
 
 generateCtags ()
 {
-    green "Generating ctags tag file\n"
-    ctags -R --exclude=.git --exclude=log --languages=ruby . $(bundle list --paths | xargs)
+    hasCtags || installCtags
+
+    if hasCtags; then
+        green "Generating ctags tag file\n"
+        ctags -R --exclude=.git --exclude=log --languages=ruby . $(bundle list --paths | xargs)
+    fi
 }
 
 hasBundler ()
@@ -660,24 +742,234 @@ installRubyRI ()
     ruby --version | grep "$(echo $RUBY_VER | sed -e 's/\./\\./g')" >/dev/null
 }
 
+addGerritHook ()
+{
+    if ! [ -d .git/hooks ]; then 
+        red "Could not add gerrit hook because the hooks dir is not where expected"
+        return 1
+    fi
+
+    cat << "__EOF__" > .git/hooks/commit-msg
+#!/bin/sh
+# From Gerrit Code Review 2.8.5
+#
+# Part of Gerrit Code Review (http://code.google.com/p/gerrit/)
+#
+# Copyright (C) 2009 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+unset GREP_OPTIONS
+
+CHANGE_ID_AFTER="Bug|Issue"
+MSG="$1"
+
+# Check for, and add if missing, a unique Change-Id
+#
+add_ChangeId() {
+        clean_message=`sed -e '
+                /^diff --git .*/{
+                        s///
+                        q
+                }
+                /^Signed-off-by:/d
+                /^#/d
+        ' "$MSG" | git stripspace`
+        if test -z "$clean_message"
+        then
+                return
+        fi
+
+        if test "false" = "`git config --bool --get gerrit.createChangeId`"
+        then
+                return
+        fi
+
+        # Does Change-Id: already exist? if so, exit (no change).
+        if grep -i '^Change-Id:' "$MSG" >/dev/null
+        then
+                return
+        fi
+
+        id=`_gen_ChangeId`
+        T="$MSG.tmp.$$"
+        AWK=awk
+        if [ -x /usr/xpg4/bin/awk ]; then
+                # Solaris AWK is just too broken
+                AWK=/usr/xpg4/bin/awk
+        fi
+
+        # How this works:
+        # - parse the commit message as (textLine+ blankLine*)*
+        # - assume textLine+ to be a footer until proven otherwise
+        # - exception: the first block is not footer (as it is the title)
+        # - read textLine+ into a variable
+        # - then count blankLines
+        # - once the next textLine appears, print textLine+ blankLine* as these
+        #   aren't footer
+        # - in END, the last textLine+ block is available for footer parsing
+        $AWK '
+        BEGIN {
+                # while we start with the assumption that textLine+
+                # is a footer, the first block is not.
+                isFooter = 0
+                footerComment = 0
+                blankLines = 0
+        }
+
+        # Skip lines starting with "#" without any spaces before it.
+        /^#/ { next }
+
+        # Skip the line starting with the diff command and everything after it,
+        # up to the end of the file, assuming it is only patch data.
+        # If more than one line before the diff was empty, strip all but one.
+        /^diff --git / {
+                blankLines = 0
+                while (getline) { }
+                next
+        }
+
+        # Count blank lines outside footer comments
+        /^$/ && (footerComment == 0) {
+                blankLines++
+                next
+        }
+
+        # Catch footer comment
+        /^\[[a-zA-Z0-9-]+:/ && (isFooter == 1) {
+                footerComment = 1
+        }
+
+        /]$/ && (footerComment == 1) {
+                footerComment = 2
+        }
+
+        # We have a non-blank line after blank lines. Handle this.
+        (blankLines > 0) {
+                print lines
+                for (i = 0; i < blankLines; i++) {
+                        print ""
+                }
+
+                lines = ""
+                blankLines = 0
+                isFooter = 1
+                footerComment = 0
+        }
+
+        # Detect that the current block is not the footer
+        (footerComment == 0) && (!/^\[?[a-zA-Z0-9-]+:/ || /^[a-zA-Z0-9-]+:\/\//) {
+                isFooter = 0
+        }
+
+        {
+                # We need this information about the current last comment line
+                if (footerComment == 2) {
+                        footerComment = 0
+                }
+                if (lines != "") {
+                        lines = lines "\n";
+                }
+                lines = lines $0
+        }
+
+        # Footer handling:
+        # If the last block is considered a footer, splice in the Change-Id at the
+        # right place.
+        # Look for the right place to inject Change-Id by considering
+        # CHANGE_ID_AFTER. Keys listed in it (case insensitive) come first,
+        # then Change-Id, then everything else (eg. Signed-off-by:).
+        #
+        # Otherwise just print the last block, a new line and the Change-Id as a
+        # block of its own.
+        END {
+                unprinted = 1
+                if (isFooter == 0) {
+                        print lines "\n"
+                        lines = ""
+                }
+                changeIdAfter = "^(" tolower("'"$CHANGE_ID_AFTER"'") "):"
+                numlines = split(lines, footer, "\n")
+                for (line = 1; line <= numlines; line++) {
+                        if (unprinted && match(tolower(footer[line]), changeIdAfter) != 1) {
+                                unprinted = 0
+                                print "Change-Id: I'"$id"'"
+                        }
+                        print footer[line]
+                }
+                if (unprinted) {
+                        print "Change-Id: I'"$id"'"
+                }
+        }' "$MSG" > "$T" && mv "$T" "$MSG" || rm -f "$T"
+}
+_gen_ChangeIdInput() {
+        echo "tree `git write-tree`"
+        if parent=`git rev-parse "HEAD^0" 2>/dev/null`
+        then
+                echo "parent $parent"
+        fi
+        echo "author `git var GIT_AUTHOR_IDENT`"
+        echo "committer `git var GIT_COMMITTER_IDENT`"
+        echo
+        printf '%s' "$clean_message"
+}
+_gen_ChangeId() {
+        _gen_ChangeIdInput |
+        git hash-object -t commit --stdin
+}
+
+
+add_ChangeId
+
+__EOF__
+
+    [ -f .git/hooks/commit-msg ] && chmod +x .git/hooks/commit-msg
+}
+
 read -r -d '' VAR << __EOF__
 ${green}
 Thank you for giving Canvas by Instructure a try!  Let's set up your development environment.
 
 Please report bugs to $MAINTAINER_EMAIL.
 
-We will be doing the following:
+We will do the following, in this order:
 
-     1. Setting up and configuring ruby
-     2. Installing brew package manager (if on Mac OS X)
-     3. Setting up and configuring chruby for multiple ruby versions
-     4. Setting up and install PostgreSQL
-     5. Installing git
-     6. Cloning the canvas repo
-     7. Building canvas assets
-     8. Creating a basic database config file
-     9. Creating the development and test databases for Canvas in PostgreSQL
-    10. Optionally generate ctags and set a ruby version for use with chruby
+     1. Install brew package manager (if on Mac OS X)
+     2. Install any distro specific dependencies we need
+     3. Check and set the correct locale (needed for PostgreSQL)
+     4. Set up and configure ruby
+     5. Set up and configure Node.js/npm
+     6. (Optionally) Set up and configure chruby and ruby-install for multiple ruby versions
+     7. Set up and install PostgreSQL
+     8. Install git
+     9. Clone the canvas repo
+    10. Set the chruby auto version (if chruby is installed)
+    11. Install Bundler (into chruby environment if using chruby)
+    12. run 'bundle install' on the repo to install canvas' required gems
+    13. run 'npm install' to install required npm packages
+    14. Build canvas assets
+    15. Create a basic PostgreSQL database config file
+    16. Start the PostgreSQL server and make sure it starts without error
+    17. Create the necessary PostgreSQL databases for Canvas
+    18. Populate the PostgreSQL databases
+    19. Add the gerrit commit-msg hook to the repo (if cloning from gerrit)
+    20. (Optionally) generate ctags and set a ruby version for use with chruby
+
+You can run this script as many times as necessary on your system, to create as many clones of the canvas repo as you like
+${restore}${yellow}
+ * You will be prompted for input several times before the script is finished.
+ * You will also need sudo access.
 ${restore}
 __EOF__
 echo -e "$VAR"
@@ -693,17 +985,15 @@ if runningUnsupported; then
     die "Oh no!  You're using an OS I don't know how to support yet.  Please report this to $MAINTAINER_EMAIL"
 fi
 
-blue "I see you're running $(runningWhat).  Is this correct? (Y/N): "
+cyan "I see you're running $(runningWhat).  Is this correct? (Y/N): "
 read RESP
 
 if ! [[ $RESP =~ [Yy] ]]; then
     die "Oh no!  Please report this to $MAINTAINER_EMAIL"
 fi
 
-blue "You will need to have sudo access to continue.  You may be prompted several times for your password\n"
-
-blue "Where do you want to clone canvas to (absolute path to a parent directory)?\n"
-blue "(Leave blank for default of $canvasdir): " 
+cyan "\nWhere do you want to clone canvas to (absolute path to a parent directory)?\n"
+cyan "(Leave blank for default of $canvasdir): " 
 read newcanvasdir
 
 [ -n "$newcanvasdir" ] && canvasdir="$newcanvasdir"
@@ -711,29 +1001,59 @@ read newcanvasdir
 mkdir -p "$canvasdir"
 [ -d "$canvasdir" ] || die "Could not create directory \"$canvasdir\""
 
+cyan "\nDo you work for Instructure? (If so we'll clone from gerrit, otherwise straight from Github) (Y/N): "
+read WORKHERE
+
+if [[ $WORKHERE =~ [Yy] ]]; then
+    CLONE_URL='gerrit:canvas-lms'
+
+    yellow "\nMake sure you read and complete the Gerrit setup instructions:\n\n    https://gollum.instructure.com/Using-Gerrit\n"
+    green "\nSpecifically you need to:\n\n    1. Register with Gerrit\n    2. Setup SSH\n    3. Set your email address properly\n\n"
+    cyan "Are you ready to continue (meaning you've done the Gerrit stuff above already)? <Press Enter>: "
+    read
+
+    if ! [ -f ~/.ssh/config ] || ! $(cat ~/.ssh/config | grep "Host gerrit" >/dev/null 2>&1); then
+        red "\nI don't see gerrit information in your SSH config file :(\n"
+        read -p "What is the gerrit server's hostname?: " GERR_HOSTNAME
+        read -p "What is your gerrit server username?: " GERR_USERNAME
+        read -p "What port number is gerrit listening on?: " GERR_PORTNUM
+
+        if [ -n "$GERR_HOSTNAME" ] && [ -n "$GERR_USERNAME" ] && [ -n "$GERR_PORTNUM" ]; then
+            CLONE_URL="ssh://${GERR_USERNAME}@${GERR_HOSTNAME}:${GERR_PORTNUM}/canvas-lms"
+        else
+            die "Incomplete gerrit information.  Please set up gerrit and try again"
+        fi
+    fi
+else
+    CLONE_URL='https://github.com/instructure/canvas-lms.git'
+fi
+
 if chrubySupported; then
-    blue "Do you want to use chruby and ruby-install (recommended)? (Y/N): "
+    cyan "\nDo you want to use chruby and ruby-install (recommended)? (Y/N): "
     read CHRUBY
 else
     CHRUBY=N
 fi
 
-blue "Do you want to generate ctags? (Y/N): "
+cyan "\nDo you want to generate ctags? (Y/N): "
 read CTAGS
 
 
 installDistroDependencies
 setLocale
+installBrew || die "Error installing Home Brew on your system.  Please install manually and try again"
 installRuby || die "Error installing Ruby on your system.  Please install manually and try again"
 installNodejs || die "Error installing Node.js on your system.  Please install manually and try again"
-installBrew || die "Error installing Home Brew on your system.  Please install manually and try again"
 [[ $CHRUBY =~ [Yy] ]] && { installChruby || die "Error installing Chruby on your system.  Please install manually and try again"; }
 [[ $CHRUBY =~ [Yy] ]] && { installRubyinstall || die "Error installing Chruby on your system.  Please install manually and try again"; }
 installPostgres || die "Error installing Postgres on your system.  Please install manually and try again"
 configurePostgres || die "Error configuring Postgres on your system.  Please configure manually and try again"
 installGit || die "Error installing Git on your system.  Please install manually and try again"
-cloneCanvas || die "Error cloning Canvas.  Please check your network connection"
+cloneCanvas || die "Error cloning Canvas.  Please check your network connection, and make sure you've completed gerrit setup (if you work for Instructure)"
+
+# Move to the newly created canvas directory
 cd "$canvaslocation" || die "Could not move to the newly cloned directory"
+
 [[ $CHRUBY =~ [Yy] ]] && { writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; }
 [[ $CHRUBY =~ [Yy] ]] && { installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again"; }
 installBundler || die "Error install bundle.  Please install bundle manually and try again"
@@ -744,4 +1064,8 @@ createDatabaseConfigFile || die "Error creating the database config files"
 startPostgres || die "Error starting PostgreSQL.  Please make sure it is installed and try again"
 createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again.  You may need to run 'sudo killall postgres' to nuke any running servers that are interfering"
 populateDatabases || die "Error populating the databases"
+[[ $WORKHERE =~ [Yy] ]] && { addGerritHook || red "Error adding Gerrit hook.  See https://gollum.instructure.com/Using-Gerrit#Cloning-a-repository"; }
 [[ $CTAGS =~ [Yy] ]] && { generateCtags || die "Error generating ctags"; }
+
+cyan "You made it!  Hope it wasn't too painful...\n"
+cyan "You're system should now be ready for Canvas development.\n"
