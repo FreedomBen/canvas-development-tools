@@ -375,6 +375,10 @@ addChrubySourcingToFile ()
             echo "[ -f /usr/share/chruby/chruby.sh ] && . /usr/share/chruby/chruby.sh" >> "$f"
         [ -f /usr/share/chruby/auto.sh ] && \
             echo "[ -f /usr/share/chruby/auto.sh ] && . /usr/share/chruby/auto.sh" >> "$f"
+        [ -f /usr/local/opt/chruby/share/chruby/chruby.sh ] && \
+            echo "[ -f /usr/local/opt/chruby/share/chruby/chruby.sh ] && . /usr/local/opt/chruby/share/chruby/chruby.sh" >> "$f"
+        [ -f /usr/local/opt/chruby/share/chruby/auto.sh ] && \
+            echo "[ -f /usr/local/opt/chruby/share/chruby/auto.sh ] && . /usr/local/opt/chruby/share/chruby/auto.sh" >> "$f"
     fi
 }
 
