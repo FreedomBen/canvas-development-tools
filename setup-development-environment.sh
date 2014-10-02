@@ -186,7 +186,8 @@ installDistroDependencies ()
             postgresql postgresql-devel postgresql-server
     elif runningUbuntu; then
         sudo apt-get -y install ruby-dev zlib1g-dev rubygems1.9.1 libxml2-dev libxslt1-dev libsqlite3-dev \
-            libhttpclient-ruby imagemagick libxmlsec1-dev python-software-properties
+            libhttpclient-ruby imagemagick libxmlsec1-dev python-software-properties postgresql \
+            postgresql-contrib libpq-dev libpqxx-dev ruby-pg nodejs-legacy nodejs
     elif runningArch; then
         sudo pacman -S --needed --noconfirm lsb-release curl libxslt python2
     elif runningMint; then
