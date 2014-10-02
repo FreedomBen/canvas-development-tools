@@ -199,6 +199,8 @@ installDistroDependencies ()
 
 setLocale ()
 {
+    green "Setting locale\n"
+
     if runningArch && ! $(locale | grep "LANG=en_US.UTF-8" >/dev/null 2>&1); then
         cyan "Your locale is not currently set to en_US.UTF-8.\n"
         cyan "Press <Enter> and I'll change it for you, or Ctrl+C to quit\n"
@@ -212,6 +214,8 @@ setLocale ()
 
 aurinstall ()
 {
+    green "Installing $1 from the aur\n"
+
     AUR_DIR="/tmp/aur"
     AUR_BUILD_DIR="$AUR_DIR/build"
     AUR_TARBALLS_DIR="$AUR_DIR/tarballs"
@@ -250,6 +254,8 @@ hasBrew ()
 
 installBrew ()
 {
+    green "Installing brew if necessary\n"
+
     if runningOSX; then
         if ! hasBrew; then
             ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -296,6 +302,8 @@ hasRuby ()
 
 installRuby ()
 {
+    green "Installing ruby if necessary\n"
+
     if ! $(which ruby > /dev/null 2>&1); then
         if $(runningOSX); then
             brew install ruby
@@ -315,7 +323,14 @@ installRuby ()
 
 hasNodejs ()
 {
-    if $(which node >/dev/null 2>&1) && $(which npm >/dev/null 2>&1); then
+    NODE=node
+    NPM=npm
+
+    if runningUbuntu || runningMint; then
+        NODE=nodejs
+    fi
+        
+    if $(which $NODE >/dev/null 2>&1) && $(which $NPM >/dev/null 2>&1); then
         green "Nodejs is installed\n"
         return 0
     else
@@ -326,13 +341,15 @@ hasNodejs ()
 
 installNodejs ()
 {
+    green "Installing node.js if necessary\n"
+
     if ! hasNodejs; then
         if runningOSX; then
             brew install node
         elif runningFedora; then
             sudo yum -y install nodejs
         elif runningUbuntu; then
-            sudo apt-get -y install nodejs
+            sudo apt-get -y install nodejs npm
         elif runningArch; then
             sudo pacman -S --needed --noconfirm nodejs
         elif runningMint; then
@@ -356,6 +373,8 @@ hasChruby ()
 
 addChrubySourcingToFile ()
 {
+    green "Adding chruby sourcing to a bash startup file\n"
+
     f="$HOME/.bashrc"
     [ -n "$1" ] && f="$1"
 
@@ -384,6 +403,8 @@ addChrubySourcingToFile ()
 
 installChruby ()
 {
+    green "Installing chruby if necessary\n"
+
     # ruby-install is installed in a separate method
     if ! hasChruby; then
         if runningOSX; then
@@ -424,6 +445,8 @@ hasRubyinstall ()
 
 installRubyinstall ()
 {
+    green "Installing ruby-install if necessary\n"
+
     if ! hasRubyinstall; then
         if runningOSX; then
             brew install ruby-install
@@ -443,6 +466,8 @@ installRubyinstall ()
 
 writeChrubyFile ()
 {
+    green "Writing chruby file to repo for version $CHRUBY_VERSION\n"
+
     CHRUBY_VERSION="ruby-$RUBY_VER"
     green "Writing Ruby version \"$CHRUBY_VERSION\" to file\n"
     echo "$CHRUBY_VERSION" > .ruby-version
@@ -461,6 +486,8 @@ hasPostgres ()
 
 installPostgres ()
 {
+    green "Installing PostgreSQL if necessary\n"
+
     if ! hasPostgres; then
         if runningOSX; then
             brew install postgresql
@@ -480,6 +507,8 @@ installPostgres ()
 
 configurePostgres ()
 {
+    green "Configuring PostgreSQL\n"
+
     if ! hasPostgres; then
         installPostgres
     fi
@@ -489,7 +518,7 @@ configurePostgres ()
         return 1
     fi
 
-    if ! runningOSX; then
+    if ! runningOSX && ! runningUbuntu; then
         # make sure there is a postgres user
         sudo useradd --no-create-home --system postgres
         sudo mkdir -p /var/{lib,log}/postgres
@@ -506,6 +535,17 @@ configurePostgres ()
         sudo -u postgres pg_ctl -D /var/lib/postgres/data stop
     fi
 
+    if runningUbuntu || runningMint; then
+        if ! $(sudo -u postgres psql postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$(whoami)'" | grep "1" >/dev/null); then
+            service postgresql start
+            cyan "Waiting 5 seconds for the PostgreSQL server to start...\n"
+            sleep 5
+            sudo useradd --no-create-home --system postgres
+            sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
+            service postgresql stop
+        fi
+    fi
+
     if runningArch || runningFedora; then
         sudo systemctl enable postgresql.service
     fi
@@ -515,16 +555,30 @@ postgresRunning ()
 {
     if runningArch || runningFedora; then
         systemctl status postgresql.service
+    elif runningUbuntu || runningMint; then
+        service postgresql status
     else
         ps auxwww | grep -E "postgres\s-D" >/dev/null 2>&1
+    fi
+
+    if [ "$?" = "0" ]; then
+        green "PostgreSQL server is running\n"
+        return 0
+    else
+        yellow "PostgreSQL server is NOT running\n"
+        return 1
     fi
 }
 
 startPostgres ()
 {
+    green "Starting PostgreSQL\n"
+
     if ! postgresRunning; then
         if runningArch || runningFedora; then
             sudo systemctl start postgresql
+        elif runningUbuntu || runningMint; then
+            service postgresl start
         else
             pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
         fi
@@ -546,6 +600,8 @@ hasGit ()
 
 installGit ()
 {
+    green "Installing git if necessary\n"
+
     if ! hasGit; then
         if runningOSX; then
             brew install git
@@ -565,13 +621,17 @@ installGit ()
 
 cloneCanvas ()
 {
+    green "Cloning canvas\n"
+
     cd "$canvasdir" 
     if [ -d canvas-lms ]; then 
         cyan "You may already have a canvas checkout (the directory exists).\n"
         cyan "Delete it and reclone? (Y/N): "
         read RESP
         if [[ $RESP =~ [Yy] ]]; then
-            rm -rf canvas-lms
+            # For some reason we don't have permissions to delete some files
+            # unless we use sudo  :(
+            sudo rm -rf canvas-lms
         else
             return 0
         fi
@@ -583,10 +643,11 @@ cloneCanvas ()
 installNpmPackages ()
 {
     green "Installing required npm assets\n"
+
     if runningArch; then
-        sudo npm install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
+        sudo $NPM install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
     else
-        sudo npm install
+        sudo $NPM install
     fi
 }
 
@@ -598,6 +659,8 @@ buildCanvasAssets ()
 
 createDatabaseConfigFile ()
 {
+    green "Creating initial database config files\n"
+
     for c in amazon_s3 delayed_jobs domain file_store outgoing_mail security scribd external_migration database; do 
         cp -v "config/$c.yml.example" "config/$c.yml"
     done
@@ -616,6 +679,8 @@ databaseExists ()
 
 createDatabases ()
 {
+    green "Creating initial databases if necessary\n"
+
     if $(which createdb >/dev/null 2>&1); then
         databaseExists "canvas_development" || createdb canvas_development
         databaseExists "canvas_queue_development" || createdb canvas_queue_development
@@ -629,6 +694,8 @@ createDatabases ()
 populateDatabases ()
 {
     createDatabases
+
+    green "Populating initial databases\n"
 
     bundle exec rake db:initial_setup
 
@@ -657,6 +724,8 @@ hasCtags ()
 
 installCtags ()
 {
+    green "Installing ctags if necessary\n"
+
     if ! hasCtags; then
         if runningOSX; then
             brew install ctags
@@ -675,6 +744,8 @@ installCtags ()
 generateCtags ()
 {
     hasCtags || installCtags
+
+    green "Generating ctags tags file\n"
 
     if hasCtags; then
         green "Generating ctags tag file\n"
@@ -695,6 +766,8 @@ hasBundler ()
 
 installBundler ()
 {
+    green "Installing bundler if necessary\n"
+
     # Install the latest version possible and set BUNDLE_VER
     
     # Try to read the bundler version straight from the gem file
@@ -703,10 +776,11 @@ installBundler ()
 
     if [ -n "$BUNDLE_VER" ]; then
         green "Installing the bundle gem version $BUNDLE_VER\n"
-        gem install bundler -v "$BUNDLE_VER"
+        gem install bundler -v "$BUNDLE_VER" || \
+            sudo gem install bundler -v "$BUNDLE_VER"
     elif ! hasBundler; then
         green "Installing the bundle gem newest version\n"
-        gem install bundler
+        gem install bundler || sudo gem install bundler
     fi
     
     hasBundler
@@ -715,6 +789,7 @@ installBundler ()
 installGems ()
 {
     green "Installing bundler gems with bundle install (but no mysql)\n"
+
     if [ -n "$BUNDLE_VER" ]; then
         bundle _${BUNDLE_VER}_ install --without mysql
     else
@@ -741,6 +816,8 @@ installGems ()
 
 installRubyRI ()
 {
+    green "Installing ruby-install if necessary\n"
+
     ruby-install --no-reinstall ruby $RUBY_VER
     cd .
     ruby --version | grep "$(echo $RUBY_VER | sed -e 's/\./\\./g')" >/dev/null
@@ -748,6 +825,8 @@ installRubyRI ()
 
 addGerritHook ()
 {
+    green "Adding gerrit commit-msg hook\n"
+
     if ! [ -d .git/hooks ]; then 
         red "Could not add gerrit hook because the hooks dir is not where expected"
         return 1
