@@ -182,14 +182,13 @@ installDistroDependencies ()
             green "XCode command line tools are installed\n"
         fi
     elif runningFedora; then
-        :
+        sudo yum -y install ruby-devel libxml2-devel libxslt-devel libpqxx-devel sqlite-devel \
+            postgresql postgresql-devel postgresql-server
     elif runningUbuntu; then
-        :
+        sudo apt-get -y install ruby-dev zlib1g-dev rubygems1.9.1 libxml2-dev libxslt1-dev libsqlite3-dev \
+            libhttpclient-ruby imagemagick libxmlsec1-dev python-software-properties
     elif runningArch; then
-        sudo pacman -S --needed --noconfirm lsb-release
-        sudo pacman -S --needed --noconfirm curl
-        sudo pacman -S --needed --noconfirm libxslt
-        sudo pacman -S --needed --noconfirm python2
+        sudo pacman -S --needed --noconfirm lsb-release curl libxslt python2
     elif runningMint; then
         :
     else
@@ -347,7 +346,7 @@ installNodejs ()
         if runningOSX; then
             brew install node
         elif runningFedora; then
-            sudo yum -y install nodejs
+            sudo yum -y install nodejs npm
         elif runningUbuntu; then
             sudo apt-get -y install nodejs npm
         elif runningArch; then
@@ -492,23 +491,36 @@ installPostgres ()
         if runningOSX; then
             brew install postgresql
         elif runningFedora; then
-            sudo yum -y install postgresql
+            sudo yum -y install postgresql postgresql-devel postgresql-server
         elif runningUbuntu; then
-            sudo apt-get -y install postgresql
+            sudo apt-get -y install postgresql postgresql-contrib
         elif runningArch; then
             sudo pacman -S --needed --noconfirm postgresql
         elif runningMint; then
-            sudo apt-get -y install postgresql
+            sudo apt-get -y install postgresql postgresql-contrib
         fi
     fi
 
     hasPostgres
 }
 
+addPostgresUser()
+{
+    sudo mkdir -p /var/{lib,log}/postgres
+
+    if ! runningOSX; then
+        sudo useradd --no-create-home --system postgres
+    fi
+
+    if runningOSX; then
+        sudo chown $(whoami) /var/{lib,log}/postgres
+    else
+        sudo chown postgres /var/{lib,log}/postgres
+    fi
+}
+
 configurePostgres ()
 {
-    green "Configuring PostgreSQL\n"
-
     if ! hasPostgres; then
         installPostgres
     fi
@@ -518,33 +530,42 @@ configurePostgres ()
         return 1
     fi
 
-    if ! runningOSX && ! runningUbuntu; then
+    green "Configuring PostgreSQL\n"
+
+    addPostgresUser
+
+    if runningOSX; then
+        initdb --locale en_US.UTF-8 -E UTF8 -D /var/lib/postgres/data
+        pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
+        pg_ctl -D /var/lib/postgres/data stop
+    fi
+
+    if runningFedora; then
+        sudo postgresql-setup initdb        
+        sudo systemctl start postgresql.service
+    fi
+
+    if runningArch; then
         # make sure there is a postgres user
-        sudo useradd --no-create-home --system postgres
-        sudo mkdir -p /var/{lib,log}/postgres
-        sudo chown postgres /var/{lib,log}/postgres
         sudo -u postgres initdb --locale en_US.UTF-8 -E UTF8 -D /var/lib/postgres/data
         sudo -u postgres pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
+        sudo -u postgres pg_ctl -D /var/lib/postgres/data stop
+    fi
 
+    if runningUbuntu || runningMint; then
+        sudo -u postgres service postgresql start
+    fi
+
+    if ! runningOSX; then
         # Give PG some time to start up ..
         cyan "Waiting 5 seconds for the PostgreSQL server to start...\n"
         sleep 5
         if ! $(sudo -u postgres psql postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$(whoami)'" | grep "1" >/dev/null); then
             sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
         fi
-        sudo -u postgres pg_ctl -D /var/lib/postgres/data stop
     fi
 
-    if runningUbuntu || runningMint; then
-        if ! $(sudo -u postgres psql postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$(whoami)'" | grep "1" >/dev/null); then
-            service postgresql start
-            cyan "Waiting 5 seconds for the PostgreSQL server to start...\n"
-            sleep 5
-            sudo useradd --no-create-home --system postgres
-            sudo -u postgres createuser --createdb --login --createrole --superuser --replication $(whoami)
-            service postgresql stop
-        fi
-    fi
+    runningArch && sudo -u postgres pg_ctl -D /var/lib/postgres/data stop
 
     if runningArch || runningFedora; then
         sudo systemctl enable postgresql.service
@@ -578,7 +599,7 @@ startPostgres ()
         if runningArch || runningFedora; then
             sudo systemctl start postgresql
         elif runningUbuntu || runningMint; then
-            service postgresl start
+            sudo -u postgres service postgresl start
         else
             pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
         fi
@@ -774,6 +795,10 @@ installBundler ()
     [ -d Gemfile.d/_before ] && \
     BUNDLE_VER=$(ruby -e "$(cat Gemfile.d/_before.rb | grep required_bundler_version | head -1); puts \"#{required_bundler_version.last}\"")
 
+    if ! $(echo $PATH | grep "$(gem env 'GEM_PATHS')" >/dev/null 2>&1); then
+        export PATH="$PATH:$(gem env 'GEM_PATHS')"
+    fi
+
     if [ -n "$BUNDLE_VER" ]; then
         green "Installing the bundle gem version $BUNDLE_VER\n"
         gem install bundler -v "$BUNDLE_VER" || \
@@ -789,6 +814,11 @@ installBundler ()
 installGems ()
 {
     green "Installing bundler gems with bundle install (but no mysql)\n"
+
+    # Patch required for building the thrift gem on OS X
+    if runningOSX; then
+        bundle config build.thrift "--with-cppflags=-D_FORTIFY_SOURCE=0"
+    fi
 
     if [ -n "$BUNDLE_VER" ]; then
         bundle _${BUNDLE_VER}_ install --without mysql
@@ -1139,7 +1169,7 @@ cd "$canvaslocation" || die "Could not move to the newly cloned directory"
 
 [[ $CHRUBY =~ [Yy] ]] && { writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; }
 [[ $CHRUBY =~ [Yy] ]] && { installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again"; }
-installBundler || die "Error install bundle.  Please install bundle manually and try again"
+installBundler || die "Error installing bundle.  Please install bundle manually and try again"
 installGems || die "Error installing required gems.  Please run 'bundle install' manually and try again"
 installNpmPackages || die "Error installing npm packages.  Please run 'npm install' manually and try again"
 buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again"
