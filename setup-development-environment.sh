@@ -204,9 +204,9 @@ setLocale ()
         cyan "Your locale is not currently set to en_US.UTF-8.\n"
         cyan "Press <Enter> and I'll change it for you, or Ctrl+C to quit\n"
         read
-        echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-        locale-gen
-        echo "LANG=en_US.UTF-8" > /etc/locale.conf
+        sudo sh -c "echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen"
+        sudo locale-gen
+        sudo sh -c "echo 'LANG=en_US.UTF-8' > /etc/locale.conf"
         . /etc/locale.conf
     fi
 }
@@ -266,7 +266,7 @@ if $(which brew >/dev/null 2>&1); then
 fi
 __EOF__
 
-            yellow "You will need to have '$(brew --prefix)/opt/coreutils/libexec/gnubin\n in your PATH variable in order to run brew programs.\n"
+            yellow "You will need to have '$(brew --prefix)/bin\n in your PATH variable in order to run brew programs.\n"
             yellow "This can be done easily by adding these lines of code to ~/.bash_profile:\n\n"
             white "$VAR\n\n"
             yellow "Do this now?  (If not make sure you do it manually) (Y/N): "
@@ -279,7 +279,7 @@ __EOF__
         fi
 
         # make sure brew stuff is in our path
-        if ! $(echo "$PATH" | sed -e 's/:/\n/g' | grep "$(brew --prefix)/opt/coreutils" >/dev/null 2>&1); then
+        if ! $(echo "$PATH" | sed -e 's/:/\n/g' | grep "$(brew --prefix)/bin" >/dev/null 2>&1); then
             yellow "Brew bin is not in PATH. Adding...\n"
             export PATH="$PATH:$(brew --prefix)/bin"   
             white "New PATH is '$PATH'\n"
@@ -785,19 +785,25 @@ hasBundler ()
     fi
 }
 
+pathGems ()
+{
+    green "Making sure the gem location is in PATH\n"
+
+    if ! $(echo $PATH | grep "$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')" >/dev/null 2>&1); then
+        export PATH="$PATH:$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')/bin"
+    fi
+}
+
 installBundler ()
 {
     green "Installing bundler if necessary\n"
 
-    # Install the latest version possible and set BUNDLE_VER
-    
-    # Try to read the bundler version straight from the gem file
-    [ -d Gemfile.d/_before ] && \
-    BUNDLE_VER=$(ruby -e "$(cat Gemfile.d/_before.rb | grep required_bundler_version | head -1); puts \"#{required_bundler_version.last}\"")
+    pathGems
 
-    if ! $(echo $PATH | grep "$(gem env 'GEM_PATHS')" >/dev/null 2>&1); then
-        export PATH="$PATH:$(gem env 'GEM_PATHS')"
-    fi
+    # Install the latest version possible and set BUNDLE_VER
+    # Try to read the bundler version straight from the gem file
+    [ -f Gemfile.d/_before.rb ] && \
+    BUNDLE_VER=$(ruby -e "$(cat Gemfile.d/_before.rb | grep required_bundler_version | head -1); puts \"#{required_bundler_version.last}\"")
 
     if [ -n "$BUNDLE_VER" ]; then
         green "Installing the bundle gem version $BUNDLE_VER\n"
@@ -814,6 +820,8 @@ installBundler ()
 installGems ()
 {
     green "Installing bundler gems with bundle install (but no mysql)\n"
+
+    pathGems
 
     # Patch required for building the thrift gem on OS X
     if runningOSX; then
@@ -1177,8 +1185,8 @@ createDatabaseConfigFile || die "Error creating the database config files"
 startPostgres || die "Error starting PostgreSQL.  Please make sure it is installed and try again"
 createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again.  You may need to run 'sudo killall postgres' to nuke any running servers that are interfering"
 populateDatabases || die "Error populating the databases"
-[[ $WORKHERE =~ [Yy] ]] && { addGerritHook || red "Error adding Gerrit hook.  See https://gollum.instructure.com/Using-Gerrit#Cloning-a-repository"; }
-[[ $CTAGS =~ [Yy] ]] && { generateCtags || die "Error generating ctags"; }
+[[ $WORKHERE =~ [Yy] ]] && { addGerritHook || red "Error adding Gerrit hook.  See https://gollum.instructure.com/Using-Gerrit#Cloning-a-repository\n"; }
+[[ $CTAGS =~ [Yy] ]] && { generateCtags || red "Error generating ctags\n"; }
 
 cyan "You made it!  Hope it wasn't too painful...\n"
 cyan "You're system should now be ready for Canvas development.\n"
