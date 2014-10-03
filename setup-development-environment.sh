@@ -550,7 +550,6 @@ configurePostgres ()
         # make sure there is a postgres user
         sudo -u postgres initdb --locale en_US.UTF-8 -E UTF8 -D /var/lib/postgres/data
         sudo -u postgres pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
-        sudo -u postgres pg_ctl -D /var/lib/postgres/data stop
     fi
 
     if runningUbuntu || runningMint; then
@@ -605,6 +604,9 @@ startPostgres ()
             pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
         fi
     fi
+
+    cyan "Waiting 5 seconds for the PostgreSQL server to start...\n"
+    sleep 5
 
     postgresRunning
 }
@@ -667,7 +669,8 @@ installNpmPackages ()
     green "Installing required npm assets\n"
 
     if runningArch; then
-        sudo $NPM install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
+        # sudo $NPM install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
+        sudo $NPM install --python=python2
     else
         sudo $NPM install
     fi
