@@ -20,6 +20,7 @@
 
 # END-NOTICE
 
+CUSTOM_GEM_FILE=Gemfile.d/ben.rb
 
 die ()
 {
@@ -27,10 +28,13 @@ die ()
     exit 1
 }
 
-[ -d Gemfile.d ] || die "Not in correct place.  Could not find Gemfile.d dir"
+[ -d Gemfile.d ] || die "Not in root of the canvas checkout (Could not find the dir Gemfile.d)"
 
-cat << __EOF__ > Gemfile.d/ben.rb
+cat << __EOF__ > $CUSTOM_GEM_FILE
 gem 'awesome_print'
 gem 'colorize'
 gem 'wirb'
 __EOF__
+
+echo "Added these gems to $CUSTOM_GEM_FILE so they are available to your local instance:"
+cat $CUSTOM_GEM_FILE

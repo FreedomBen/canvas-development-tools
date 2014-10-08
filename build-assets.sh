@@ -27,7 +27,7 @@ die ()
     exit 1
 }
 
-[ -d app ] || die "Not in correct place.  Are you in the root of the canvas checkout?"
+[ -d app ] || die "Not in correct location.  Are you in the root of the canvas checkout?"
 
 $(which npm >/dev/null 2>&1) || die "npm is not installed.  Cannot build assets"
 $(which bundle >/dev/null 2>&1) || die "bundle is not installed.  Cannot build assets"

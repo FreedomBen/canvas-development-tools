@@ -1,5 +1,24 @@
 #!/bin/bash
 
+# BEGIN-NOTICE
+
+# Copyright (C) 2014  Benjamin Porter
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# END-NOTICE
+
 # Colors made a little easier
 restore='\033[0m'
 black='\033[0;30m'
@@ -177,6 +196,7 @@ installDistroDependencies ()
         if ! $(which gcc >/dev/null 2>&1); then
             cyan "We're going to install the OS X command line tools.  You will have to agree to Apple's terms\n"
             xcode-select --install
+            cyan "Please click the install button in the dialog that is being shown\n"
             cyan "Press <Enter> to continue after the command line tools are installed: "
         else
             green "XCode command line tools are installed\n"
@@ -789,12 +809,40 @@ hasBundler ()
     fi
 }
 
+bashSource ()
+{
+    if runningOSX; then
+        echo "${HOME}/.bash_profile"
+    else
+        echo "${HOME}/.bashrc"
+    fi
+}
+
 pathGems ()
 {
     green "Making sure the gem location is in PATH\n"
 
-    if ! $(echo $PATH | grep "$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')" >/dev/null 2>&1); then
+            read -r -d '' VAR << "__EOF__"
+# Added by canvas-lms setup-development script
+# This adds the gem bin to your PATH
+if ! $(echo $PATH | grep "$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')/bin" >/dev/null 2>&1); then
+    export PATH="$PATH:$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')/bin"
+fi
+__EOF__
+
+    if ! $(echo $PATH | grep "$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')/bin" >/dev/null 2>&1); then
         export PATH="$PATH:$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')/bin"
+
+        cyan "The Gems bin wasn't in your PATH.  I added it temporarily, but you may want to make it permanent\n"
+        cyan "This can be done by adding these lines to your $(bashSource):\n\n"
+        echo "$VAR"
+        cyan "\nDo this now? (Y/N): "
+        read ADDLINES
+
+        if [[ $ADDLINES =~ [yY] ]]; then
+            echo "" >> "$(bashSource)"
+            echo "$VAR" >> "$(bashSource)"
+        fi
     fi
 }
 
@@ -812,10 +860,10 @@ installBundler ()
     if [ -n "$BUNDLE_VER" ]; then
         green "Installing the bundle gem version $BUNDLE_VER\n"
         gem install bundler -v "$BUNDLE_VER" || \
-            sudo gem install bundler -v "$BUNDLE_VER"
+            { yellow "Installing bundler without sudo failed.  Trying again with sudo...\n"; sudo gem install bundler -v "$BUNDLE_VER"; }
     elif ! hasBundler; then
         green "Installing the bundle gem newest version\n"
-        gem install bundler || sudo gem install bundler
+        gem install bundler || { yellow "Installing bundler without sudo failed.  Trying again with sudo...\n"; sudo gem install bundler; }
     fi
     
     hasBundler

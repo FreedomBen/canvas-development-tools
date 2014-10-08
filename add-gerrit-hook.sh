@@ -27,7 +27,7 @@ die ()
     exit 1
 }
 
-[ -d .git/hooks ] || die "Not in correct place.  Could not find .git/hooks dir"
+[ -d .git/hooks ] || die "Not in root of canvas checkout.  Could not find the dir .git/hooks"
 
 cat << "__EOF__" > .git/hooks/commit-msg
 #!/bin/sh
@@ -215,3 +215,5 @@ add_ChangeId
 __EOF__
 
 [ -f .git/hooks/commit-msg ] && chmod +x .git/hooks/commit-msg
+
+echo 'You are now hooked!'
