@@ -1,0 +1,14 @@
+#!/bin/bash
+echo "You are pushing to gerrit!"
+
+CURBRANCH="$(git st | head -1 | sed -e 's/On branch //g')"
+
+if [ -n "$1" ]; then
+    COMMIT="$1"
+else
+    COMMIT="$CURBRANCH"
+fi
+
+echo "Pushing commit \"$COMMIT\" to branch \"$CURBRANCH\""
+git push origin $COMMIT:refs/for/$CURBRANCH
+echo "Done!"
