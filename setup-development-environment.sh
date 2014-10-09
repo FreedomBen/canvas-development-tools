@@ -916,13 +916,18 @@ installGems ()
 
 installRubyRI ()
 {
-    green "Installing ruby-install if necessary\n"
+    green "Installing ruby $RUBY_VER using ruby-install\n"
 
     sourceChruby
 
-    ruby-install --no-reinstall ruby $RUBY_VER
-    chruby $RUBY_VER
-    ruby --version | grep "$(echo $RUBY_VER | sed -e 's/\./\\./g')" >/dev/null
+    if hasChruby; then
+        ruby-install --no-reinstall ruby $RUBY_VER
+        chruby $RUBY_VER
+        ruby --version | grep "$(echo $RUBY_VER | sed -e 's/\./\\./g')" >/dev/null
+    else
+        red "Could not install ruby using ruby-install because chruby is not installed or found\n"
+        return 1
+    fi
 }
 
 addGerritHook ()
