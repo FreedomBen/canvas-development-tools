@@ -420,6 +420,17 @@ addChrubySourcingToFile ()
     fi
 }
 
+sourceChruby ()
+{
+    # source now so chruby works immediately
+    [ -f /usr/local/share/chruby/chruby.sh ] && . /usr/local/share/chruby/chruby.sh
+    [ -f /usr/local/share/chruby/auto.sh ] && . /usr/local/share/chruby/auto.sh
+    [ -f /usr/share/chruby/chruby.sh ] && . /usr/share/chruby/chruby.sh
+    [ -f /usr/share/chruby/auto.sh ] && . /usr/share/chruby/auto.sh
+
+    hasChruby
+}
+
 installChruby ()
 {
     green "Installing chruby if necessary\n"
@@ -441,11 +452,7 @@ installChruby ()
 
         addChrubySourcingToFile
 
-        # source now so chruby works immediately
-        [ -f /usr/local/share/chruby/chruby.sh ] && . /usr/local/share/chruby/chruby.sh
-        [ -f /usr/local/share/chruby/auto.sh ] && . /usr/local/share/chruby/auto.sh
-        [ -f /usr/share/chruby/chruby.sh ] && . /usr/share/chruby/chruby.sh
-        [ -f /usr/share/chruby/auto.sh ] && . /usr/share/chruby/auto.sh
+        sourceChruby
     fi
 
     hasChruby
@@ -698,7 +705,11 @@ installNpmPackages ()
 buildCanvasAssets ()
 {
     green "Compiling Canvas assets\n"
-    bundle exec rake canvas:compile_assets
+    bundle exec rake canvas:compile_assets || {
+        yellow "The asset compilation failed.  This might be a permissions thing."
+        cyan "Re-run the compile with sudo?"
+        pathGems
+    }
 }
 
 createDatabaseConfigFile ()
@@ -907,8 +918,10 @@ installRubyRI ()
 {
     green "Installing ruby-install if necessary\n"
 
+    sourceChruby
+
     ruby-install --no-reinstall ruby $RUBY_VER
-    cd .
+    chruby $RUBY_VER
     ruby --version | grep "$(echo $RUBY_VER | sed -e 's/\./\\./g')" >/dev/null
 }
 
