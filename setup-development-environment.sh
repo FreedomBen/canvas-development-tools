@@ -193,14 +193,7 @@ installDistroDependencies ()
     green "Installing any distro specific dependencies\n"
 
     if runningOSX; then
-        if ! $(which gcc >/dev/null 2>&1); then
-            cyan "We're going to install the OS X command line tools.  You will have to agree to Apple's terms\n"
-            xcode-select --install
-            cyan "Please click the install button in the dialog that is being shown\n"
-            cyan "Press <Enter> to continue after the command line tools are installed: "
-        else
-            green "XCode command line tools are installed\n"
-        fi
+        :
     elif runningFedora; then
         sudo yum -y install ruby-devel libxml2-devel libxslt-devel libpqxx-devel sqlite-devel \
             postgresql postgresql-devel postgresql-server
@@ -278,6 +271,12 @@ installBrew ()
 
     if runningOSX; then
         if ! hasBrew; then
+
+            cyan "We're going to install the OS X command line tools through brew.  You will have to agree to Apple's terms\n"
+            cyan "Please click the install button in the dialog that will be shown in a minute or so\n"
+            cyan "Press <Enter> to continue: "
+            read
+
             ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
             read -r -d '' VAR << "__EOF__"
 # Added by canvas-lms setup-development script
@@ -1228,11 +1227,11 @@ cloneCanvas || die "Error cloning Canvas.  Please check your network connection,
 cd "$canvaslocation" || die "Could not move to the newly cloned directory"
 
 [[ $CHRUBY =~ [Yy] ]] && { writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; }
-[[ $CHRUBY =~ [Yy] ]] && { installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again"; }
+[[ $CHRUBY =~ [Yy] ]] && { installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again (ruby-install ruby $RUBY_VER)"; }
 installBundler || die "Error installing bundle.  Please install bundle manually and try again"
 installGems || die "Error installing required gems.  Please run 'bundle install' manually and try again"
 installNpmPackages || die "Error installing npm packages.  Please run 'npm install' manually and try again"
-buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again"
+buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again (bundle exec rake canvas:compile_assets)"
 createDatabaseConfigFile || die "Error creating the database config files"
 startPostgres || die "Error starting PostgreSQL.  Please make sure it is installed and try again"
 createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again.  You may need to run 'sudo killall postgres' to nuke any running servers that are interfering"
