@@ -306,10 +306,10 @@ __EOF__
             yellow "You will need to have '$(brew --prefix)/bin\n in your PATH variable in order to run brew programs.\n"
             yellow "This can be done easily by adding these lines of code to ~/.bash_profile:\n\n"
             white "$VAR\n\n"
-            yellow "Do this now?  (If not make sure you do it manually) (Y/N): "
+            yellow "Do this now?  (If not make sure you do it manually) ([Y]/N): "
             read addLines
 
-            if [[ $addLines =~ [yY] ]]; then
+            if ! [[ $addLines =~ [nN] ]]; then
                 echo "" >> ~/.bash_profile
                 echo "$VAR" >> ~/.bash_profile
             fi
@@ -693,7 +693,7 @@ cloneCanvas ()
     cd "$canvasdir" 
     if [ -d canvas-lms ]; then 
         cyan "You may already have a canvas checkout (the directory exists).\n"
-        cyan "Delete it and reclone? (Y/N): "
+        cyan "Delete it and reclone? (Y/[N]): "
         read RESP
         if [[ $RESP =~ [Yy] ]]; then
             # For some reason we don't have permissions to delete some files
@@ -863,10 +863,10 @@ __EOF__
         cyan "The Gems bin wasn't in your PATH.  I added it temporarily, but you may want to make it permanent\n"
         cyan "This can be done by adding these lines to your $(bashSource):\n\n"
         echo "$VAR"
-        cyan "\nDo this now? (Y/N): "
+        cyan "\nDo this now? ([Y]/N): "
         read ADDLINES
 
-        if [[ $ADDLINES =~ [yY] ]]; then
+        if ! [[ $ADDLINES =~ [nN] ]]; then
             echo "" >> "$(bashSource)"
             echo "$VAR" >> "$(bashSource)"
         fi
@@ -1192,10 +1192,10 @@ if runningUnsupported; then
     die "Oh no!  You're using an OS I don't know how to support yet.  Please report this to $MAINTAINER_EMAIL"
 fi
 
-cyan "I see you're running $(runningWhat).  Is this correct? (Y/N): "
+cyan "I see you're running $(runningWhat).  Is this correct? ([Y]/N): "
 read RESP
 
-if ! [[ $RESP =~ [Yy] ]]; then
+if [[ $RESP =~ [Nn] ]]; then
     die "Oh no!  Please report this to $MAINTAINER_EMAIL"
 fi
 
@@ -1208,7 +1208,7 @@ read newcanvasdir
 mkdir -p "$canvasdir"
 [ -d "$canvasdir" ] || die "Could not create directory \"$canvasdir\""
 
-cyan "\nDo you work for Instructure? (If so we'll clone from gerrit, otherwise straight from Github) (Y/N): "
+cyan "\nDo you work for Instructure? (If so we'll clone from gerrit, otherwise straight from Github) (Y/[N]): "
 read WORKHERE
 
 if [[ $WORKHERE =~ [Yy] ]]; then
@@ -1236,13 +1236,13 @@ else
 fi
 
 if chrubySupported; then
-    cyan "\nDo you want to use chruby and ruby-install (recommended)? (Y/N): "
+    cyan "\nDo you want to use chruby and ruby-install (recommended)? (Y/[N]): "
     read CHRUBY
 else
     CHRUBY=N
 fi
 
-cyan "\nDo you want to generate ctags? (Y/N): "
+cyan "\nDo you want to generate ctags? (Y/[N]): "
 read CTAGS
 
 
