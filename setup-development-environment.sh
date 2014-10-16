@@ -723,9 +723,15 @@ buildCanvasAssets ()
 {
     green "Compiling Canvas assets\n"
     bundle exec rake canvas:compile_assets || {
-        yellow "The asset compilation failed.  This might be a permissions thing."
-        cyan "Re-run the compile with sudo?"
+        yellow "The asset compilation failed.  This might be a permissions thing.\n"
+        cyan "Re-run the compile with sudo? ([Y]/N): "
+        read RECOMPILE
+
         pathGems
+
+        if ! [[ $RECOMPILE =~ [Nn] ]]; then
+            sudo bundle exec rake canvas:compile_assets
+        fi
     }
 }
 
