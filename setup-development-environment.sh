@@ -269,12 +269,25 @@ hasBrew ()
     fi
 }
 
+askreinstallbrew ()
+{
+    cyan "\nBrew is already installed, but sometimes reinstalling it fixes errors."
+    cyan "\nReinstall brew? (Y/[N]): "
+    read REINSTALL
+
+    if [[ $REINSTALL =~ [Yy] ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 installBrew ()
 {
     green "Installing brew if necessary\n"
 
     if runningOSX; then
-        if ! hasBrew; then
+        if ! hasBrew || askreinstallbrew; then
 
             cyan "We're going to install the OS X command line tools through brew.  You will have to agree to Apple's terms\n"
             cyan "Please click the install button in the dialog that will be shown in a minute or so\n"
