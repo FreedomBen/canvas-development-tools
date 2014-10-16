@@ -342,7 +342,7 @@ installRuby ()
 
     if ! $(which ruby > /dev/null 2>&1); then
         if $(runningOSX); then
-            brew install ruby
+            brew reinstall ruby
         elif $(runningFedora); then
             sudo yum -y install ruby
         elif $(runningUbuntu); then
@@ -381,7 +381,7 @@ installNodejs ()
 
     if ! hasNodejs; then
         if runningOSX; then
-            brew install node
+            brew reinstall node
         elif runningFedora; then
             sudo yum -y install nodejs npm
         elif runningUbuntu; then
@@ -455,7 +455,7 @@ installChruby ()
     # ruby-install is installed in a separate method
     if ! hasChruby; then
         if runningOSX; then
-            brew install chruby
+            brew reinstall chruby
             addChrubySourcingToFile "$HOME/.bash_profile"
         elif runningFedora; then
             :
@@ -492,7 +492,7 @@ installRubyinstall ()
 
     if ! hasRubyinstall; then
         if runningOSX; then
-            brew install ruby-install
+            brew reinstall ruby-install
         elif runningFedora; then
             :
         elif runningUbuntu; then
@@ -533,7 +533,7 @@ installPostgres ()
 
     if ! hasPostgres; then
         if runningOSX; then
-            brew install postgresql
+            brew reinstall postgresql
         elif runningFedora; then
             sudo yum -y install postgresql postgresql-devel postgresql-server
         elif runningUbuntu; then
@@ -671,7 +671,7 @@ installGit ()
 
     if ! hasGit; then
         if runningOSX; then
-            brew install git
+            brew reinstall git
         elif runningFedora; then
             sudo yum -y install git
         elif runningUbuntu; then
@@ -800,7 +800,7 @@ installCtags ()
 
     if ! hasCtags; then
         if runningOSX; then
-            brew install ctags
+            brew reinstall ctags
         elif runningFedora; then
             sudo yum -y install ctags
         elif runningUbuntu; then
