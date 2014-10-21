@@ -190,6 +190,15 @@ rubyInstallSupported ()
 
 installDistroDependencies ()
 {
+    if runningArch; then
+        cyan "If you haven't recently done a pacman -Syu then stuff might fail.  Run one now? (Y/[N]): "
+        read PACMANSYU
+
+        if [[ $PACMANSYU =~ [Yy] ]]; then
+            sudo pacman -Syu
+        fi
+    fi
+
     green "Installing any distro specific dependencies\n"
 
     if runningOSX; then
