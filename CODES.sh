@@ -954,6 +954,7 @@ installRubyRI ()
 
     if hasChruby; then
         ruby-install --no-reinstall ruby $RUBY_VER
+        sourceChruby
         chruby $RUBY_VER
         ruby --version | grep "$(echo $RUBY_VER | sed -e 's/\./\\./g')" >/dev/null
     else
