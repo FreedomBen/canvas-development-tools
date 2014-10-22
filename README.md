@@ -1,11 +1,11 @@
 canvas-development-tools
 ========================
 
-Some handy scripts that I use to make life better while working on Canvas by Instructure.
+Some handy scripts that I use to make life better while working on [Canvas](https://github.com/instructure/canvas-lms) by [Instructure](http://www.instructure.com/).
 
 **Script breakdown:**
 
-1. **CODES.sh:** The Canvas Open Development Environment Script (CODES) will take any OS X, Arch Linux, Ubuntu, Fedora, or Linux Mint system from a base install to a fully setup environment for developing Canvas.  This script will do everything that the other scripts do individually, generally in a more robust fashion since the current PATH, working directory, and state of the system are more predictable.  This script is full of helpful prompts and output to help you figure out what's going on when things go wrong.  It can also be run as many times as needed to complete a setup or to clone a new repo.
+1. **CODES.sh:** The *Canvas Open Development Environment Script* (CODES) will take any OS X, Arch Linux, Ubuntu, Fedora, or Linux Mint system from a base install to a fully setup environment for developing Canvas.  This script will do everything that the other scripts do individually, generally in a more robust fashion since the current PATH, working directory, and state of the system are more predictable.  This script is full of helpful prompts and output to help you figure out what's going on when things go wrong.  It can also be run as many times as needed to complete a setup or to clone a new repo.
 2. **git-gerrit-submit:** This handy script should be copied to somewhere in your PATH.  After that, you can use the command `git gerrit-submit` to easily push the current changes to gerrit
 3. **setup-new-repo.sh:** This script sets up a freshly cloned canvas repo by building assets, setting the gerrit hook, creating ctags, etc.  This script requires the others since it simply calls them to do its job
 4. **add-custom-gems.sh:** This script adds a few custom gems that I like to use, such as colorize, which makes outputting color to the Rails log easier
