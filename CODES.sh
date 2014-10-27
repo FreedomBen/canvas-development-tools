@@ -734,7 +734,8 @@ assetFailCheckContinue ()
     yellow "You can continue setup but the assets will need to be\n"
     yellow "successfully built before you can run Canvas\n"
     yellow "(You build them with 'bundle exec rake canvas:compile_assets')\n"
-    read -p "Continue with setup? ([Y]/N): " CONTINUESETUP
+    cyan "Continue with setup? ([Y]/N): " 
+    read CONTINUESETUP
 
     if [[ $CONTINUESETUP =~ [Nn] ]]; then
         return 1
