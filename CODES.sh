@@ -728,18 +728,34 @@ installNpmPackages ()
     fi
 }
 
+assetFailCheckContinue ()
+{
+    yellow "\nThe asset compilation failed.\n"
+    yellow "You can continue setup but the assets will need to be\n"
+    yellow "successfully built before you can run Canvas\n"
+    yellow "(You build them with 'bundle exec rake canvas:compile_assets')\n"
+    read -p "Continue with setup? ([Y]/N): " CONTINUESETUP
+
+    if [[ $CONTINUESETUP =~ [Nn] ]]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
 buildCanvasAssets ()
 {
     green "Compiling Canvas assets\n"
     bundle exec rake canvas:compile_assets || {
         yellow "The asset compilation failed.  This might be a permissions thing.\n"
-        cyan "Re-run the compile with sudo? ([Y]/N): "
+        cyan "Re-run the compile with sudo? (Y/[N]): "
         read RECOMPILE
 
-        pathGems
-
-        if ! [[ $RECOMPILE =~ [Nn] ]]; then
-            sudo bundle exec rake canvas:compile_assets
+        if [[ $RECOMPILE =~ [yY] ]]; then
+            pathGems
+            sudo bundle exec rake canvas:compile_assets || return $(assetFailcheckContinue)
+        else
+            return $(assetFailCheckContinue)
         fi
     }
 }
