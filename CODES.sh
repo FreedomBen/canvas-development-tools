@@ -753,9 +753,13 @@ buildCanvasAssets ()
 
         if [[ $RECOMPILE =~ [yY] ]]; then
             pathGems
-            sudo bundle exec rake canvas:compile_assets || return $(assetFailcheckContinue)
+            sudo bundle exec rake canvas:compile_assets || {
+                assetFailCheckContinue
+                return $?
+            }
         else
-            return $(assetFailCheckContinue)
+            assetFailCheckContinue
+            return $?
         fi
     }
 }
