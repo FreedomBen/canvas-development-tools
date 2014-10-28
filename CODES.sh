@@ -312,7 +312,7 @@ if $(which brew >/dev/null 2>&1); then
 fi
 __EOF__
 
-            yellow "You will need to have '$(brew --prefix)/bin\n in your PATH variable in order to run brew programs.\n"
+            yellow "\nYou will need to have '$(brew --prefix)/bin' in your PATH variable to run brew programs.\n"
             yellow "This can be done easily by adding these lines of code to ~/.bash_profile:\n\n"
             white "$VAR\n\n"
             yellow "Do this now?  (If not make sure you do it manually) ([Y]/N): "
