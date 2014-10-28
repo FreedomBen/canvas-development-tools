@@ -938,8 +938,10 @@ installGems ()
 
     pathGems
 
-    # Patch required for building the thrift gem on OS X
     if runningOSX; then
+        # Dependency required for building postgres extensions on OS X
+        ARCHFLAGS="-arch x86_64" gem install pg || { yellow "Installing pg without sudo failed.  Trying again with sudo...\n"; sudo ARCHFLAGS="-arch x86_64" gem install pg; }
+        # Patch required for building the thrift gem on OS X
         bundle config build.thrift "--with-cppflags=-D_FORTIFY_SOURCE=0"
     fi
 
