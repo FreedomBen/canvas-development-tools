@@ -34,6 +34,7 @@ cat << __EOF__ > $CUSTOM_GEM_FILE
 gem 'awesome_print'
 gem 'colorize'
 gem 'wirb'
+gem 'rest-client'
 __EOF__
 
 echo "Added these gems to $CUSTOM_GEM_FILE so they are available to your local instance:"
