@@ -1183,14 +1183,68 @@ __EOF__
     [ -f .git/hooks/commit-msg ] && chmod +x .git/hooks/commit-msg
 }
 
-read -r -d '' VAR << __EOF__
+is_full ()
+{
+    [ "$MODE" = "FULL" ]
+}
+
+is_clone ()
+{
+    is_full || [ "$MODE" = "CLONE" ]
+}
+
+is_install ()
+{
+    is_full || [ "$MODE" = "INSTALL" ]
+}
+
+read -r -d '' LOGO << "__EOF__"
+----------------------------------------------------------------------
+
+        /\ \           /\ \         /\ \         /\ \        / /\
+       /  \ \         /  \ \       /  \ \____   /  \ \      / /  \
+      / /\ \ \       / /\ \ \     / /\ \_____\ / /\ \ \    / / /\ \__
+     / / /\ \ \     / / /\ \ \   / / /\/___  // / /\ \_\  / / /\ \___\
+    / / /  \ \_\   / / /  \ \_\ / / /   / / // /_/_ \/_/  \ \ \ \/___/
+   / / /    \/_/  / / /   / / // / /   / / // /____/\      \ \ \
+  / / /          / / /   / / // / /   / / // /\____\/  _    \ \ \
+ / / /________  / / /___/ / / \ \ \__/ / // / /______ /_/\__/ / /
+/ / /_________\/ / /____\/ /   \ \___\/ // / /_______\\ \/___/ /
+\/____________/\/_________/     \/_____/ \/__________/ \_____\/
+
+----------------------------------------------------------------------
+
+__EOF__
+
+read -r -d '' INTRO << __EOF__
 ${green}
+
 Thank you for giving Canvas by Instructure a try!  Let's set up your development environment.
 
 Please report bugs to $MAINTAINER_EMAIL.
+${restore}
+__EOF__
 
+read -r -d '' USAGE << __EOF__
+${red}
+Usage: $0 [mode]
+${restore}${blue}
+Modes:
+
+    -f | --full     Installs all environment dependencies, clones and builds canvas (All steps)
+    -i | --install  Installs all environment dependencies but does not clone canvas (Steps 1-8)
+    -c | --clone    Clones and builds canvas (assumes all dependencies are installed (Step 9-20)
+${restore}
+__EOF__
+
+read -r -d '' WHATWEDO << __EOF__
+${green}
 We will do the following, in this order:
+${restore}
+__EOF__
 
+read -r -d '' INSTALL << __EOF__
+     ${green}
      1. Install brew package manager (if on Mac OS X)
      2. Install any distro specific dependencies we need
      3. Check and set the correct locale (needed for PostgreSQL)
@@ -1198,7 +1252,11 @@ We will do the following, in this order:
      5. Set up and configure Node.js/npm
      6. (Optionally) Set up and configure chruby and ruby-install for multiple ruby versions
      7. Set up and install PostgreSQL
-     8. Install git
+     8. Install git${restore}
+__EOF__
+
+read -r -d '' CLONE << __EOF__
+${green}
      9. Clone the canvas repo
     10. Set the chruby auto version (if chruby is installed)
     11. Install Bundler (into chruby environment if using chruby)
@@ -1210,7 +1268,11 @@ We will do the following, in this order:
     17. Create the necessary PostgreSQL databases for Canvas
     18. Populate the PostgreSQL databases
     19. Add the gerrit commit-msg hook to the repo (if cloning from gerrit)
-    20. (Optionally) generate ctags and set a ruby version for use with chruby
+    20. (Optionally) generate ctags and set a ruby version for use with chruby${restore}
+__EOF__
+
+read -r -d '' INFO << __EOF__
+${yellow}
 
 You can run this script as many times as necessary on your system, to create as many clones of the canvas repo as you like
 ${restore}${yellow}
@@ -1218,7 +1280,32 @@ ${restore}${yellow}
  * You will also need sudo access.
 ${restore}
 __EOF__
-echo -e "$VAR"
+
+
+echo -en "${green}"
+echo -n "${LOGO}"
+echo -en "${restore}"
+echo -en "${INTRO}"
+
+# determine mode
+if [[ "$1" =~ -f ]]; then
+    MODE="FULL"
+elif [[ "$1" =~ -i ]]; then
+    MODE="INSTALL"
+elif [[ "$1" =~ -c ]]; then
+    MODE="CLONE"
+else
+    # usage
+    echo -en "$USAGE"
+    exit 1
+fi
+
+echo -en "$WHATWEDO"
+
+is_install && echo -en "$INSTALL"
+is_clone && echo -en "$CLONE"
+
+echo -en "${INFO}"
 
 if [ "$(id -u)" = "0" ]; then
     red "You are running as root\n"
@@ -1238,42 +1325,6 @@ if [[ $RESP =~ [Nn] ]]; then
     die "Oh no!  Please report this to $MAINTAINER_EMAIL"
 fi
 
-cyan "\nWhere do you want to clone canvas to (absolute path to a parent directory)?\n"
-cyan "(Leave blank for default of $canvasdir): " 
-read newcanvasdir
-
-[ -n "$newcanvasdir" ] && canvasdir="$newcanvasdir"
-
-mkdir -p "$canvasdir"
-[ -d "$canvasdir" ] || die "Could not create directory \"$canvasdir\""
-
-cyan "\nDo you work for Instructure? (If so we'll clone from gerrit, otherwise straight from Github) (Y/[N]): "
-read WORKHERE
-
-if [[ $WORKHERE =~ [Yy] ]]; then
-    CLONE_URL='gerrit:canvas-lms'
-
-    yellow "\nMake sure you read and complete the Gerrit setup instructions:\n\n    https://gollum.instructure.com/Using-Gerrit\n"
-    green "\nSpecifically you need to:\n\n    1. Register with Gerrit\n    2. Setup SSH\n    3. Set your email address properly\n\n"
-    cyan "Are you ready to continue (meaning you've done the Gerrit stuff above already)? <Press Enter>: "
-    read
-
-    if ! [ -f ~/.ssh/config ] || ! $(cat ~/.ssh/config | grep "Host gerrit" >/dev/null 2>&1); then
-        red "\nI don't see gerrit information in your SSH config file :(\n"
-        read -p "What is the gerrit server's hostname?: " GERR_HOSTNAME
-        read -p "What is your gerrit server username?: " GERR_USERNAME
-        read -p "What port number is gerrit listening on?: " GERR_PORTNUM
-
-        if [ -n "$GERR_HOSTNAME" ] && [ -n "$GERR_USERNAME" ] && [ -n "$GERR_PORTNUM" ]; then
-            CLONE_URL="ssh://${GERR_USERNAME}@${GERR_HOSTNAME}:${GERR_PORTNUM}/canvas-lms"
-        else
-            die "Incomplete gerrit information.  Please set up gerrit and try again"
-        fi
-    fi
-else
-    CLONE_URL='https://github.com/instructure/canvas-lms.git'
-fi
-
 if chrubySupported; then
     cyan "\nDo you want to use chruby and ruby-install (recommended)? (Y/[N]): "
     read CHRUBY
@@ -1281,37 +1332,80 @@ else
     CHRUBY=N
 fi
 
-cyan "\nDo you want to generate ctags? (Y/[N]): "
-read CTAGS
+if is_clone; then
+    cyan "\nWhere do you want to clone canvas to (absolute path to a parent directory)?\n"
+    cyan "(Leave blank for default of $canvasdir): " 
+    read newcanvasdir
+
+    [ -n "$newcanvasdir" ] && canvasdir="$newcanvasdir"
+
+    mkdir -p "$canvasdir"
+    [ -d "$canvasdir" ] || die "Could not create directory \"$canvasdir\""
+
+    cyan "\nDo you work for Instructure? (If so we'll clone from gerrit, otherwise straight from Github) (Y/[N]): "
+    read WORKHERE
+
+    if [[ $WORKHERE =~ [Yy] ]]; then
+        CLONE_URL='gerrit:canvas-lms'
+
+        yellow "\nMake sure you read and complete the Gerrit setup instructions:\n\n    https://gollum.instructure.com/Using-Gerrit\n"
+        green "\nSpecifically you need to:\n\n    1. Register with Gerrit\n    2. Setup SSH\n    3. Set your email address properly\n\n"
+        cyan "Are you ready to continue (meaning you've done the Gerrit stuff above already)? <Press Enter>: "
+        read
+
+        if ! [ -f ~/.ssh/config ] || ! $(cat ~/.ssh/config | grep "Host gerrit" >/dev/null 2>&1); then
+            red "\nI don't see gerrit information in your SSH config file :(\n"
+            read -p "What is the gerrit server's hostname?: " GERR_HOSTNAME
+            read -p "What is your gerrit server username?: " GERR_USERNAME
+            read -p "What port number is gerrit listening on?: " GERR_PORTNUM
+
+            if [ -n "$GERR_HOSTNAME" ] && [ -n "$GERR_USERNAME" ] && [ -n "$GERR_PORTNUM" ]; then
+                CLONE_URL="ssh://${GERR_USERNAME}@${GERR_HOSTNAME}:${GERR_PORTNUM}/canvas-lms"
+            else
+                die "Incomplete gerrit information.  Please set up gerrit and try again"
+            fi
+        fi
+    else
+        CLONE_URL='https://github.com/instructure/canvas-lms.git'
+    fi
+
+    cyan "\nDo you want to generate ctags? (Y/[N]): "
+    read CTAGS
+fi
 
 
-installDistroDependencies
-setLocale
-installBrew || die "Error installing Home Brew on your system.  Please install manually and try again"
-installRuby || die "Error installing Ruby on your system.  Please install manually and try again"
-installNodejs || die "Error installing Node.js on your system.  Please install manually and try again"
-[[ $CHRUBY =~ [Yy] ]] && { installChruby || die "Error installing Chruby on your system.  Please install manually and try again"; }
-[[ $CHRUBY =~ [Yy] ]] && { installRubyinstall || die "Error installing Chruby on your system.  Please install manually and try again"; }
-installPostgres || die "Error installing Postgres on your system.  Please install manually and try again"
-configurePostgres || die "Error configuring Postgres on your system.  Please configure manually and try again"
-installGit || die "Error installing Git on your system.  Please install manually and try again"
-cloneCanvas || die "Error cloning Canvas.  Please check your network connection, and make sure you've completed gerrit setup (if you work for Instructure)"
+if is_install; then
+    installDistroDependencies
+    setLocale
+    installBrew || die "Error installing Home Brew on your system.  Please install manually and try again"
+    installRuby || die "Error installing Ruby on your system.  Please install manually and try again"
+    installNodejs || die "Error installing Node.js on your system.  Please install manually and try again"
+    [[ $CHRUBY =~ [Yy] ]] && { installChruby || die "Error installing Chruby on your system.  Please install manually and try again"; }
+    [[ $CHRUBY =~ [Yy] ]] && { installRubyinstall || die "Error installing Chruby on your system.  Please install manually and try again"; }
+    installPostgres || die "Error installing Postgres on your system.  Please install manually and try again"
+    configurePostgres || die "Error configuring Postgres on your system.  Please configure manually and try again"
+    installGit || die "Error installing Git on your system.  Please install manually and try again"
+fi
 
-# Move to the newly created canvas directory
-cd "$canvaslocation" || die "Could not move to the newly cloned directory"
+if is_clone; then
+    cloneCanvas || die "Error cloning Canvas.  Please check your network connection, and make sure you've completed gerrit setup (if you work for Instructure)"
 
-[[ $CHRUBY =~ [Yy] ]] && { writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; }
-[[ $CHRUBY =~ [Yy] ]] && { installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again (ruby-install ruby $RUBY_VER)"; }
-installBundler || die "Error installing bundle.  Please install bundle manually and try again"
-installGems || die "Error installing required gems.  Please run 'bundle install' manually and try again"
-installNpmPackages || die "Error installing npm packages.  Please run 'npm install' manually and try again"
-buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again (bundle exec rake canvas:compile_assets)"
-createDatabaseConfigFile || die "Error creating the database config files"
-startPostgres || die "Error starting PostgreSQL.  Please make sure it is installed and try again"
-createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again.  You may need to run 'sudo killall postgres' to nuke any running servers that are interfering"
-populateDatabases || die "Error populating the databases"
-[[ $WORKHERE =~ [Yy] ]] && { addGerritHook || red "Error adding Gerrit hook.  See https://gollum.instructure.com/Using-Gerrit#Cloning-a-repository\n"; }
-[[ $CTAGS =~ [Yy] ]] && { generateCtags || red "Error generating ctags\n"; }
+    # Move to the newly created canvas directory
+    cd "$canvaslocation" || die "Could not move to the newly cloned directory"
+
+    [[ $CHRUBY =~ [Yy] ]] && { writeChrubyFile || die "Error writing Chruby file to your repo.  Please install create the file manually and try again"; }
+    [[ $CHRUBY =~ [Yy] ]] && { installRubyRI || die "Error installing ruby with ruby-install.  Please try manually and run this script again (ruby-install ruby $RUBY_VER)"; }
+    installBundler || die "Error installing bundle.  Please install bundle manually and try again"
+    installGems || die "Error installing required gems.  Please run 'bundle install' manually and try again"
+    installNpmPackages || die "Error installing npm packages.  Please run 'npm install' manually and try again"
+    buildCanvasAssets || die "Error building Canvas assets.  Please build manually and try again (bundle exec rake canvas:compile_assets)"
+    createDatabaseConfigFile || die "Error creating the database config files"
+    startPostgres || die "Error starting PostgreSQL.  Please make sure it is installed and try again"
+    createDatabases || die "Error building the databases.  Please ensure PostgreSQL is installed and running and try again.  You may need to run 'sudo killall postgres' to nuke any running servers that are interfering"
+    populateDatabases || die "Error populating the databases"
+    [[ $WORKHERE =~ [Yy] ]] && { addGerritHook || red "Error adding Gerrit hook.  See https://gollum.instructure.com/Using-Gerrit#Cloning-a-repository\n"; }
+    [[ $CTAGS =~ [Yy] ]] && { generateCtags || red "Error generating ctags\n"; }
+fi
 
 cyan "You made it!  Hope it wasn't too painful...\n"
 cyan "You're system should now be ready for Canvas development.\n"
