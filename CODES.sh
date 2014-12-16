@@ -697,7 +697,7 @@ installGit ()
 
 cloneCanvas ()
 {
-    green "Cloning canvas\n"
+    green "Cloning canvas into '$canvaslocation'\n"
 
     cd "$canvasdir" 
     if [ -d canvas-lms ]; then 
@@ -1333,11 +1333,27 @@ else
 fi
 
 if is_clone; then
-    cyan "\nWhere do you want to clone canvas to (absolute path to a parent directory)?\n"
+    cyan "\nWhere do you want to clone canvas to (-absolute- path to a parent directory)?\n"
     cyan "(Leave blank for default of $canvasdir): " 
     read newcanvasdir
 
-    [ -n "$newcanvasdir" ] && canvasdir="$newcanvasdir"
+    # Support the ~ by replacing it with $HOME
+    if $(echo "$newcanvasdir" | grep "^~" >/dev/null 2>&1); then
+        if $(which ruby >/dev/null 2>&1); then
+            newcanvasdir=$(ruby -e "print '$newcanvasdir'.sub '~', '$HOME'")
+        else
+            red "\nYou used a ~ in your path even though I told you it had to be absolute :-)\n"
+            red "The problem is you don't have ruby installed so I can't fix it for you automatically.\n"
+            cyan "Tell me again, but please don't use ~ in it again.\n"
+            cyan "if you still use a ~ then you'll end up with canvas in a directory literally named '~': "
+            read newcanvasdir
+        fi
+    fi
+
+    if [ -n "$newcanvasdir" ]; then
+        canvasdir="$newcanvasdir"
+        canvaslocation="$newcanvasdir/canvas-lms"
+    fi
 
     mkdir -p "$canvasdir"
     [ -d "$canvasdir" ] || die "Could not create directory \"$canvasdir\""
