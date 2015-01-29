@@ -86,7 +86,7 @@ runningOSX ()
     uname -a | grep "Darwin" > /dev/null 2>&1
 }
 
-runningFedora () 
+runningFedora ()
 {
     if $(which lsb_release >/dev/null 2>&1); then
         lsb_release -d | grep --color=auto "Fedora" > /dev/null 2>&1
@@ -95,8 +95,8 @@ runningFedora ()
     fi
 }
 
-runningUbuntu () 
-{ 
+runningUbuntu ()
+{
     if $(which lsb_release >/dev/null 2>&1); then
         lsb_release -d | grep --color=auto "Ubuntu" > /dev/null 2>&1
     else
@@ -210,14 +210,14 @@ installDistroDependencies ()
         sudo apt-get update
         sudo apt-get -y install ruby-dev zlib1g-dev rubygems1.9.1 libxml2-dev libxslt1-dev libsqlite3-dev \
             libhttpclient-ruby imagemagick libxmlsec1-dev python-software-properties postgresql \
-            postgresql-contrib libpq-dev libpqxx-dev ruby-pg nodejs-legacy nodejs
+            postgresql-contrib libpq-dev libpqxx-dev ruby-pg build-essential
     elif runningArch; then
         sudo pacman -S --needed --noconfirm lsb-release curl libxslt python2
     elif runningMint; then
         sudo apt-get update
         sudo apt-get -y install ruby-dev zlib1g-dev rubygems1.9.1 libxml2-dev libxslt1-dev libsqlite3-dev \
             libhttpclient-ruby imagemagick libxmlsec1-dev python-software-properties postgresql \
-            postgresql-contrib libpq-dev libpqxx-dev ruby-pg nodejs-legacy nodejs
+            postgresql-contrib libpq-dev libpqxx-dev ruby-pg build-essential
     else
         :
     fi
@@ -327,7 +327,7 @@ __EOF__
         # make sure brew stuff is in our path
         if ! $(echo "$PATH" | sed -e 's/:/\n/g' | grep "$(brew --prefix)/bin" >/dev/null 2>&1); then
             yellow "Brew bin is not in PATH. Adding...\n"
-            export PATH="$PATH:$(brew --prefix)/bin"   
+            export PATH="$PATH:$(brew --prefix)/bin"
             white "New PATH is '$PATH'\n"
         fi
         hasBrew
@@ -374,7 +374,7 @@ hasNodejs ()
     if runningUbuntu || runningMint; then
         NODE=nodejs
     fi
-        
+
     if $(which $NODE >/dev/null 2>&1) && $(which $NPM >/dev/null 2>&1); then
         green "Nodejs is installed\n"
         return 0
@@ -394,7 +394,11 @@ installNodejs ()
         elif runningFedora; then
             sudo yum -y install nodejs npm
         elif runningUbuntu; then
-            sudo apt-get -y install nodejs npm
+            # On Ubuntu we need to use the nodejs ppa from Chris Lea or we get breakage
+            sudo apt-get -y remove nodejs nodejs-legacy npm
+            sudo add-apt-repository -y ppa:chris-lea/node.js
+            sudo apt-get update
+            sudo apt-get -y install nodejs
         elif runningArch; then
             sudo pacman -S --needed --noconfirm nodejs
         elif runningMint; then
@@ -594,7 +598,7 @@ configurePostgres ()
     fi
 
     if runningFedora; then
-        sudo postgresql-setup initdb        
+        sudo postgresql-setup initdb
         sudo systemctl start postgresql.service
     fi
 
@@ -699,8 +703,8 @@ cloneCanvas ()
 {
     green "Cloning canvas into '$canvaslocation'\n"
 
-    cd "$canvasdir" 
-    if [ -d canvas-lms ]; then 
+    cd "$canvasdir"
+    if [ -d canvas-lms ]; then
         cyan "You may already have a canvas checkout (the directory exists).\n"
         cyan "Delete it and reclone? (Y/[N]): "
         read RESP
@@ -713,7 +717,7 @@ cloneCanvas ()
         fi
     fi
 
-    git clone $CLONE_URL
+    git clone "$CLONE_URL"
 }
 
 installNpmPackages ()
@@ -722,9 +726,17 @@ installNpmPackages ()
 
     if runningArch; then
         # sudo $NPM install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
-        sudo $NPM install --python=python2
+        # sudo $NPM install --python=python2
+        $NPM install --python=python2 || {
+            sudo chown $(whoami):$(whoami) -R "$HOME/.npm"
+            $NPM install
+        }
     else
-        sudo $NPM install
+        # sudo $NPM install
+        $NPM install || {
+            sudo chown $(whoami):$(whoami) -R "$HOME/.npm"
+            $NPM install
+        }
     fi
 }
 
@@ -734,7 +746,7 @@ assetFailCheckContinue ()
     yellow "You can continue setup but the assets will need to be\n"
     yellow "successfully built before you can run Canvas\n"
     yellow "(You build them with 'bundle exec rake canvas:compile_assets')\n"
-    cyan "Continue with setup? ([Y]/N): " 
+    cyan "Continue with setup? ([Y]/N): "
     read CONTINUESETUP
 
     if [[ $CONTINUESETUP =~ [Nn] ]]; then
@@ -769,7 +781,7 @@ createDatabaseConfigFile ()
 {
     green "Creating initial database config files\n"
 
-    for c in amazon_s3 delayed_jobs domain file_store outgoing_mail security scribd external_migration database; do 
+    for c in amazon_s3 delayed_jobs domain file_store outgoing_mail security scribd external_migration database; do
         cp -v "config/$c.yml.example" "config/$c.yml"
     done
 }
@@ -928,7 +940,7 @@ installBundler ()
         green "Installing the bundle gem newest version\n"
         gem install bundler || { yellow "Installing bundler without sudo failed.  Trying again with sudo...\n"; sudo gem install bundler; }
     fi
-    
+
     hasBundler
 }
 
@@ -990,7 +1002,7 @@ addGerritHook ()
 {
     green "Adding gerrit commit-msg hook\n"
 
-    if ! [ -d .git/hooks ]; then 
+    if ! [ -d .git/hooks ]; then
         red "Could not add gerrit hook because the hooks dir is not where expected"
         return 1
     fi
@@ -1334,7 +1346,7 @@ fi
 
 if is_clone; then
     cyan "\nWhere do you want to clone canvas to (-absolute- path to a parent directory)?\n"
-    cyan "(Leave blank for default of $canvasdir): " 
+    cyan "(Leave blank for default of $canvasdir): "
     read newcanvasdir
 
     # Support the ~ by replacing it with $HOME
@@ -1425,3 +1437,5 @@ fi
 
 cyan "You made it!  Hope it wasn't too painful...\n"
 cyan "You're system should now be ready for Canvas development.\n"
+
+# vim: set filetype=sh ts=4 sw=4 sts=4 expandtab :
