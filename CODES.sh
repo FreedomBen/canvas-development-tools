@@ -43,7 +43,8 @@ MAINTAINER_EMAIL='bporter@instructure.com'
 RUBY_VER='2.1.2'
 
 canvasdir="$HOME"
-canvaslocation="$canvasdir/canvas-lms"
+checkoutname="canvas-lms"
+canvaslocation="${canvasdir}/${checkoutname}"
 
 error ()
 {
@@ -704,37 +705,37 @@ cloneCanvas ()
     green "Cloning canvas into '$canvaslocation'\n"
 
     cd "$canvasdir"
-    if [ -d canvas-lms ]; then
+    if [ -d "$checkoutname" ]; then
         cyan "You may already have a canvas checkout (the directory exists).\n"
         cyan "Delete it and reclone? (Y/[N]): "
         read RESP
         if [[ $RESP =~ [Yy] ]]; then
             # For some reason we don't have permissions to delete some files
             # unless we use sudo  :(
-            sudo rm -rf canvas-lms
+            sudo rm -rf "$checkoutname"
         else
             return 0
         fi
     fi
 
-    git clone "$CLONE_URL"
+    git clone "$CLONE_URL" "$checkoutname"
 }
 
 installNpmPackages ()
 {
     green "Installing required npm assets\n"
 
+    [ -n "$NPM" ] || NPM=npm
+
     if runningArch; then
         # sudo $NPM install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
-        # sudo $NPM install --python=python2
         $NPM install --python=python2 || {
-            sudo chown $(whoami):$(whoami) -R "$HOME/.npm"
-            $NPM install
+            sudo chown $(whoami) -R "$HOME/.npm"
+            $NPM install --python=python2
         }
     else
-        # sudo $NPM install
         $NPM install || {
-            sudo chown $(whoami):$(whoami) -R "$HOME/.npm"
+            sudo chown $(whoami) -R "$HOME/.npm"
             $NPM install
         }
     fi
@@ -1345,8 +1346,8 @@ else
 fi
 
 if is_clone; then
-    cyan "\nWhere do you want to clone canvas to (-absolute- path to a parent directory)?\n"
-    cyan "(Leave blank for default of $canvasdir): "
+    cyan "\nWhere do you want to clone canvas to (-absolute- path)?\n"
+    cyan "(Leave blank for default of $canvaslocation): "
     read newcanvasdir
 
     # Support the ~ by replacing it with $HOME
@@ -1363,8 +1364,10 @@ if is_clone; then
     fi
 
     if [ -n "$newcanvasdir" ]; then
-        canvasdir="$newcanvasdir"
-        canvaslocation="$newcanvasdir/canvas-lms"
+        canvasdir="$(dirname $newcanvasdir)"
+        canvaslocation="$newcanvasdir"
+        checkoutname="$(echo $canvaslocation | sed -e 's/\/$//g' | sed -e 's/.*\///g')"
+        green "Ok, we'll put canvas in $canvaslocation\n"
     fi
 
     mkdir -p "$canvasdir"
