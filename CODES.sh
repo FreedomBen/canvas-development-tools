@@ -205,20 +205,57 @@ installDistroDependencies ()
     if runningOSX; then
         :
     elif runningFedora; then
-        sudo yum -y install ruby-devel libxml2-devel libxslt-devel libpqxx-devel sqlite-devel \
-            postgresql postgresql-devel postgresql-server
+        sudo yum -y install ruby-devel
+        sudo yum -y install libxml2-devel
+        sudo yum -y install libxslt-devel
+        sudo yum -y install libpqxx-devel
+        sudo yum -y install sqlite-devel
+        sudo yum -y install postgresql
+        sudo yum -y install postgresql-devel
+        sudo yum -y install postgresql-server
     elif runningUbuntu; then
         sudo apt-get update
-        sudo apt-get -y install ruby-dev zlib1g-dev rubygems1.9.1 libxml2-dev libxslt1-dev libsqlite3-dev \
-            libhttpclient-ruby imagemagick libxmlsec1-dev python-software-properties postgresql \
-            postgresql-contrib libpq-dev libpqxx-dev ruby-pg build-essential
+        green "Finished running 'apt-get update'.  Installing packages"
+        sudo apt-get -y install ruby-dev
+        sudo apt-get -y install zlib1g-dev
+        sudo apt-get -y install rubygems1.9.1
+        sudo apt-get -y install libxml2-dev
+        sudo apt-get -y install libxslt1-dev
+        sudo apt-get -y install libsqlite3-dev
+        sudo apt-get -y install libhttpclient-ruby
+        sudo apt-get -y install imagemagick
+        sudo apt-get -y install libxmlsec1-dev
+        sudo apt-get -y install python-software-properties
+        sudo apt-get -y install postgresql
+        sudo apt-get -y install postgresql-contrib
+        sudo apt-get -y install libpq-dev
+        sudo apt-get -y install libpqxx-dev
+        sudo apt-get -y install ruby-pg
+        sudo apt-get -y install build-essential
     elif runningArch; then
-        sudo pacman -S --needed --noconfirm lsb-release curl libxslt python2
+        sudo pacman -S --needed --noconfirm lsb-release
+        sudo pacman -S --needed --noconfirm curl
+        sudo pacman -S --needed --noconfirm libxslt
+        sudo pacman -S --needed --noconfirm python2
     elif runningMint; then
         sudo apt-get update
-        sudo apt-get -y install ruby-dev zlib1g-dev rubygems1.9.1 libxml2-dev libxslt1-dev libsqlite3-dev \
-            libhttpclient-ruby imagemagick libxmlsec1-dev python-software-properties postgresql \
-            postgresql-contrib libpq-dev libpqxx-dev ruby-pg build-essential
+        green "Finished running 'apt-get update'.  Installing packages"
+        sudo apt-get -y install ruby-dev
+        sudo apt-get -y install zlib1g-dev
+        sudo apt-get -y install rubygems1.9.1
+        sudo apt-get -y install libxml2-dev
+        sudo apt-get -y install libxslt1-dev
+        sudo apt-get -y install libsqlite3-dev
+        sudo apt-get -y install libhttpclient-ruby
+        sudo apt-get -y install imagemagick
+        sudo apt-get -y install libxmlsec1-dev
+        sudo apt-get -y install python-software-properties
+        sudo apt-get -y install postgresql
+        sudo apt-get -y install postgresql-contrib
+        sudo apt-get -y install libpq-dev
+        sudo apt-get -y install libpqxx-dev
+        sudo apt-get -y install ruby-pg
+        sudo apt-get -y install build-essential
     else
         :
     fi
