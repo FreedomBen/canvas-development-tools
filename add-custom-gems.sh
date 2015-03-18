@@ -35,6 +35,8 @@ gem 'awesome_print'
 gem 'colorize'
 gem 'wirb'
 gem 'rest-client'
+gem 'hash-dot'
+gem 'file-append'
 __EOF__
 
 echo "Added these gems to $CUSTOM_GEM_FILE so they are available to your local instance:"
