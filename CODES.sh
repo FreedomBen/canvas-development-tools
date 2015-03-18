@@ -656,7 +656,7 @@ startPostgres ()
         if runningArch || runningFedora; then
             sudo systemctl start postgresql
         elif runningUbuntu || runningMint; then
-            sudo -u postgres service postgresl start
+            sudo -u postgres service postgresql start
         else
             pg_ctl -D /var/lib/postgres/data -l /var/log/postgres/server.log start
         fi
