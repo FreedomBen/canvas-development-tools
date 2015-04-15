@@ -32,7 +32,7 @@ die ()
 
 cat << __EOF__ > $CUSTOM_GEM_FILE
 gem 'awesome_print'
-gem 'colorize'
+# gem 'colorize'
 gem 'wirb'
 gem 'rest-client'
 gem 'hash-dot'
