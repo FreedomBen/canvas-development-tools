@@ -35,7 +35,7 @@ gem 'awesome_print'
 # gem 'colorize'
 gem 'wirb'
 gem 'rest-client'
-gem 'hash-dot'
+# gem 'hash-dot'
 gem 'file-append'
 __EOF__
 
