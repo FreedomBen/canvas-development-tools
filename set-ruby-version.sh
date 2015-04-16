@@ -29,6 +29,6 @@ die ()
 
 [ -d app ] || die "Are you in the root directory of your canvas checkout?"
 
-RUBY_VERSION="ruby-2.1.2"
+RUBY_VERSION="ruby-2.1.6"
 echo "Writing Ruby version \"$RUBY_VERSION\" to file"
 echo "$RUBY_VERSION" > .ruby-version

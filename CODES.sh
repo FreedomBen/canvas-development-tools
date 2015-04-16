@@ -40,7 +40,7 @@ white='\033[1;37m'
 
 
 MAINTAINER_EMAIL='bporter@instructure.com'
-RUBY_VER='2.1.2'
+RUBY_VER='2.1.6'
 
 canvasdir="$HOME"
 checkoutname="canvas-lms"
