@@ -9,9 +9,10 @@ Some handy scripts that I use to make life better while working on [Canvas](http
 2. **git-gerrit-submit:** This handy script should be copied to somewhere in your PATH.  After that, you can use the command `git gerrit-submit` to easily push the current changes to gerrit
 3. **setup-new-repo.sh:** This script sets up a freshly cloned canvas repo by building assets, setting the gerrit hook, creating ctags, etc.  This script requires the others since it simply calls them to do its job
 4. **backup-config-files.sh:** This script will back up your current config files `config/*.yml` to a private git repo so you don't have to recreate them in the event that you lose them (such as a hard drive crash, a stolen computer, or a `git clean -xfd`).  Each time you run this script a new commit is made to the repo with your latest changes.  It will also push for you if you've set a remote (not required though, you can leave it as a local only repo if you want)
-4. **add-custom-gems.sh:** This script adds a few custom gems that I like to use, such as colorize, which makes outputting color to the Rails log easier
-5. **add-gerrit-hook.sh:** If you work for Instructure, Gerrit is mandatory.  This script adds a post-commit hook that automatically adds a gerrit change-id and does some other helpful checks
-6. **build-assets.sh:** This script builds the canvas assets using rake
-7. **create-database-config.sh:** This script creates a basic database configuration for you 8. **generate-ctags.sh:** This script generates a fresh set of ctags for use with your favorite text editor
-9. **initialize-databases.sh:** This script runs the db initialization commands
-10. **set-ruby-version.sh:** This script writes the current ruby version to a `.ruby_version` file for use with chruby auto
+5. **backup-databases.sh:** This script does a sql dump of your development databases and stores them in a directory named after the date.  Very handy.
+6. **add-custom-gems.sh:** This script adds a few custom gems that I like to use, such as colorize, which makes outputting color to the Rails log easier
+7. **add-gerrit-hook.sh:** If you work for Instructure, Gerrit is mandatory.  This script adds a post-commit hook that automatically adds a gerrit change-id and does some other helpful checks
+8. **build-assets.sh:** This script builds the canvas assets using rake
+9. **create-database-config.sh:** This script creates a basic database configuration for you 8. **generate-ctags.sh:** This script generates a fresh set of ctags for use with your favorite text editor
+10. **initialize-databases.sh:** This script runs the db initialization commands
+11. **set-ruby-version.sh:** This script writes the current ruby version to a `.ruby_version` file for use with chruby auto
