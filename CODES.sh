@@ -968,7 +968,7 @@ installBundler ()
     # Install the latest version possible and set BUNDLE_VER
     # Try to read the bundler version straight from the gem file
     [ -f Gemfile.d/_before.rb ] && \
-    BUNDLE_VER=$(ruby -e "$(cat Gemfile.d/_before.rb | grep required_bundler_version | head -1); puts \"#{required_bundler_version.last}\"")
+        BUNDLE_VER=$(ruby -e "$(cat Gemfile.d/_before.rb | grep req_bundler_version | head -1); puts \"#{req_bundler_version_ceiling}\"")
 
     if [ -n "$BUNDLE_VER" ]; then
         green "Installing the bundle gem version $BUNDLE_VER\n"
