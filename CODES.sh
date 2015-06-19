@@ -215,7 +215,7 @@ installDistroDependencies ()
         sudo yum -y install postgresql-server
     elif runningUbuntu; then
         sudo apt-get update
-        green "Finished running 'apt-get update'.  Installing packages"
+        green "Finished running 'apt-get update'.  Installing packages\n"
         sudo apt-get -y install ruby-dev
         sudo apt-get -y install zlib1g-dev
         sudo apt-get -y install rubygems1.9.1
@@ -232,6 +232,7 @@ installDistroDependencies ()
         sudo apt-get -y install libpqxx-dev
         sudo apt-get -y install ruby-pg
         sudo apt-get -y install build-essential
+        sudo apt-get -y install libglib2.0
     elif runningArch; then
         sudo pacman -S --needed --noconfirm lsb-release
         sudo pacman -S --needed --noconfirm curl
@@ -239,7 +240,7 @@ installDistroDependencies ()
         sudo pacman -S --needed --noconfirm python2
     elif runningMint; then
         sudo apt-get update
-        green "Finished running 'apt-get update'.  Installing packages"
+        green "Finished running 'apt-get update'.  Installing packages\n"
         sudo apt-get -y install ruby-dev
         sudo apt-get -y install zlib1g-dev
         sudo apt-get -y install rubygems1.9.1
@@ -256,6 +257,7 @@ installDistroDependencies ()
         sudo apt-get -y install libpqxx-dev
         sudo apt-get -y install ruby-pg
         sudo apt-get -y install build-essential
+        sudo apt-get -y install libglib2.0
     else
         :
     fi
