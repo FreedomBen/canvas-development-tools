@@ -1001,7 +1001,9 @@ installGems ()
         bundle install --without mysql
     fi
 
-    if [ "$?" != "0" ]; then
+    retval="$?"
+
+    if [ "$retval" != "0" ]; then
         if [ -z "$already_attempted" ] && $(bundle install --without mysql 2>&1 | grep "version .* is required" >/dev/null); then
             already_attempted=y
             BUNDLE_VER="$(bundle install --without mysql 2>&1 | awk '{print $3}')"
@@ -1015,6 +1017,8 @@ installGems ()
 
             installBundler
             installGems # recursive
+        else
+            return $retval
         fi
     fi
 }
