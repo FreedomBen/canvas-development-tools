@@ -351,7 +351,7 @@ fi
 __EOF__
 
             yellow "\nYou will need to have '$(brew --prefix)/bin' in your PATH variable to run brew programs.\n"
-            yellow "This can be done easily by adding these lines of code to ~/.bash_profile:\n\n"
+            yellow "This can be done easily by adding these lines of code to '${HOME}/.bash_profile':\n\n"
             white "$VAR\n\n"
             yellow "Do this now?  (If not make sure you do it manually) ([Y]/N): "
             read addLines
@@ -947,7 +947,7 @@ __EOF__
         export PATH="$PATH:$(gem env 'GEM_PATHS' | sed -e 's|:|/bin:|g')/bin"
 
         cyan "The Gems bin wasn't in your PATH.  I added it temporarily, but you may want to make it permanent\n"
-        cyan "This can be done by adding these lines to your $(bashSource):\n\n"
+        cyan "This can be done by adding these lines to '$(bashSource)':\n\n"
         echo "$VAR"
         cyan "\nDo this now? ([Y]/N): "
         read ADDLINES
