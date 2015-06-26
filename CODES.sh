@@ -1482,6 +1482,6 @@ if is_clone; then
 fi
 
 cyan "You made it!  Hope it wasn't too painful...\n"
-cyan "You're system should now be ready for Canvas development.\n"
+cyan "Your system should now be ready for Canvas development.\n"
 
 # vim: set filetype=sh ts=4 sw=4 sts=4 expandtab :
