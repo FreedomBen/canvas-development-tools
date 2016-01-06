@@ -205,14 +205,14 @@ installDistroDependencies ()
     if runningOSX; then
         :
     elif runningFedora; then
-        sudo yum -y install ruby-devel
-        sudo yum -y install libxml2-devel
-        sudo yum -y install libxslt-devel
-        sudo yum -y install libpqxx-devel
-        sudo yum -y install sqlite-devel
-        sudo yum -y install postgresql
-        sudo yum -y install postgresql-devel
-        sudo yum -y install postgresql-server
+        sudo dnf -y install ruby-devel
+        sudo dnf -y install libxml2-devel
+        sudo dnf -y install libxslt-devel
+        sudo dnf -y install libpqxx-devel
+        sudo dnf -y install sqlite-devel
+        sudo dnf -y install postgresql
+        sudo dnf -y install postgresql-devel
+        sudo dnf -y install postgresql-server
     elif runningUbuntu; then
         sudo apt-get update
         green "Finished running 'apt-get update'.  Installing packages\n"
@@ -393,7 +393,7 @@ installRuby ()
         if $(runningOSX); then
             brew reinstall ruby
         elif $(runningFedora); then
-            sudo yum -y install ruby
+            sudo dnf -y install ruby
         elif $(runningUbuntu); then
             sudo apt-get -y install ruby
         elif $(runningArch); then
@@ -432,7 +432,7 @@ installNodejs ()
         if runningOSX; then
             brew reinstall node
         elif runningFedora; then
-            sudo yum -y install nodejs npm
+            sudo dnf -y install nodejs npm
         elif runningUbuntu; then
             # On Ubuntu we need to use the nodejs ppa from Chris Lea or we get breakage
             sudo apt-get -y remove nodejs nodejs-legacy npm
@@ -588,7 +588,7 @@ installPostgres ()
         if runningOSX; then
             brew reinstall postgresql
         elif runningFedora; then
-            sudo yum -y install postgresql postgresql-devel postgresql-server
+            sudo dnf -y install postgresql postgresql-devel postgresql-server
         elif runningUbuntu; then
             sudo apt-get -y install postgresql postgresql-contrib
         elif runningArch; then
@@ -726,7 +726,7 @@ installGit ()
         if runningOSX; then
             brew reinstall git
         elif runningFedora; then
-            sudo yum -y install git
+            sudo dnf -y install git
         elif runningUbuntu; then
             sudo apt-get -y install git
         elif runningArch; then
@@ -890,7 +890,7 @@ installCtags ()
         if runningOSX; then
             brew reinstall ctags
         elif runningFedora; then
-            sudo yum -y install ctags
+            sudo dnf -y install ctags
         elif runningUbuntu; then
             sudo apt-get -y install ctags
         elif runningArch; then
