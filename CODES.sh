@@ -430,23 +430,66 @@ installNodejs ()
 
     if ! hasNodejs; then
         if runningOSX; then
-            brew reinstall node
-        elif runningFedora; then
-            sudo dnf -y install nodejs npm
-        elif runningUbuntu; then
-            # On Ubuntu we need to use the nodejs ppa from Chris Lea or we get breakage
-            sudo apt-get -y remove nodejs nodejs-legacy npm
-            sudo add-apt-repository -y ppa:chris-lea/node.js
-            sudo apt-get update
-            sudo apt-get -y install nodejs
-        elif runningArch; then
-            sudo pacman -S --needed --noconfirm nodejs
-        elif runningMint; then
-            sudo apt-get -y install nodejs
+            brew tap homebrew/versions
+            brew reinstall node012
+        else
+            cyan "\nIn order to get the right version of node, we are going to\n"
+            cyan "install nvm (see https://github.com/creationix/nvm#manual-install)\n"
+            git clone https://github.com/creationix/nvm.git ~/.nvm && \
+            cd ~/.nvm                                              && \
+            git checkout `git describe --abbrev=0 --tags`          && {
+                addNvmSourcingToFile
+                sourceNvm
+            }
         fi
     fi
 
     hasNodejs
+}
+
+addNvmSourcingToFile ()
+{
+    green "Adding nvm sourcing to a bash startup file\n"
+
+    f="$HOME/.bashrc"
+    [ -n "$1" ] && f="$1"
+
+    if [ -f "$f" ] && $(cat "$f" | egrep "Added for nvm by the canvas.lms" >/dev/null 2>&1); then
+         yellow "Bashrc already has sourcing commands for nvm\n"
+    else
+        cyan "\nFor nvm to work properly, it needs to be sourced by the shell.\n"
+        cyan "I'll do this temporarily now, but you will need to add it to your\n"
+        cyan "bashrc file for it to work automatically after you close this shell.\n"
+        cyan "Should I add some lines to the end of your bashrc file so it works in the future? (Y/N): \n"
+        read ADD_NVM_TO_BASHRC
+        if [[ $ADD_NVM_TO_BASHRC =~ [Yy] ]]; then
+            echo "" >> "$f"
+            echo "# Added for nvm by the canvas-lms setup script" >> "$f"
+            echo "# These settings make nvm work" >> "$f"
+            echo "# See https://github.com/creationix/nvm#manual-install" >> "$f"
+            echo 'export NVM_DIR="$HOME/.nvm"' >> "$f"
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" # This loads nvm' >> "$f"
+        fi
+    fi
+}
+
+sourceNvm ()
+{
+    # source now so nvm works immediately
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    hasNvm
+}
+
+hasNvm ()
+{
+    if $(type nvm 2>&1 | grep "nvm is a function" >/dev/null 2>&1); then
+        green "nvm is installed\n"
+        return 0
+    else
+        yellow "nvm is NOT installed\n"
+        return 1
+    fi
 }
 
 hasChruby ()
