@@ -1,0 +1,3 @@
+postgres:
+  volumes:
+      - "./pg_data:/var/lib/postgresql/data"
