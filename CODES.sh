@@ -434,9 +434,7 @@ installNodejs ()
         elif runningFedora; then
             sudo dnf -y install nodejs npm
         elif runningUbuntu; then
-            # On Ubuntu we need to use the nodejs ppa from Chris Lea or we get breakage
-            sudo apt-get -y remove nodejs nodejs-legacy npm
-            sudo add-apt-repository -y ppa:chris-lea/node.js
+            curl -sL https://deb.nodesource.com/setup_6.x | sudo bash -
             sudo apt-get update
             sudo apt-get -y install nodejs
         elif runningArch; then
