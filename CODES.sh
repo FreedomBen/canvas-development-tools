@@ -976,7 +976,7 @@ installBundler ()
             { yellow "Installing bundler without sudo failed.  Trying again with sudo...\n"; sudo gem install bundler -v "$BUNDLE_VER"; }
     elif ! hasBundler; then
         green "Installing the bundle gem newest version\n"
-        gem install bundler || { yellow "Installing bundler without sudo failed.  Trying again with sudo...\n"; sudo gem install bundler; }
+        gem install bundler -v "$BUNDLE_VER" || { yellow "Installing bundler without sudo failed.  Trying again with sudo...\n"; sudo gem install bundler; }
     fi
 
     hasBundler
