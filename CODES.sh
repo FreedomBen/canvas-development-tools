@@ -764,16 +764,21 @@ installNpmPackages ()
 
     [ -n "$NPM" ] || NPM=npm
 
+    # If yarn is installed, favor that over npm
+    if $(which yarn >/dev/null 2>&1); then
+        NPM="$(which yarn)"
+    fi
+
     if runningArch; then
         # sudo $NPM install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
-        yarn install --python=python2 || {
+        $NPM install --python=python2 || {
             sudo chown $(whoami) -R "$HOME/.npm"
-            yarn install --python=python2
+            $NPM install --python=python2
         }
     else
-        yarn install || {
+        $NPM install || {
             sudo chown $(whoami) -R "$HOME/.npm"
-            yarn install
+            $NPM install
         }
     fi
 }
