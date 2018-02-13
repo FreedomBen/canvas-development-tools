@@ -766,14 +766,14 @@ installNpmPackages ()
 
     if runningArch; then
         # sudo $NPM install --python=python$(python2 --version 2>&1 | sed -e 's/Python //g')
-        $NPM install --python=python2 || {
+        yarn install --python=python2 || {
             sudo chown $(whoami) -R "$HOME/.npm"
-            $NPM install --python=python2
+            yarn install --python=python2
         }
     else
-        $NPM install || {
+        yarn install || {
             sudo chown $(whoami) -R "$HOME/.npm"
-            $NPM install
+            yarn install
         }
     fi
 }
