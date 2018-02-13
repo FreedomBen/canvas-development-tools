@@ -39,7 +39,7 @@ light_cyan='\033[1;36m'
 white='\033[1;37m'
 
 
-MAINTAINER_EMAIL='bporter@instructure.com'
+MAINTAINER_EMAIL='FreedomBen@protonmail.com'
 RUBY_VER='2.4.0'
 
 canvasdir="$HOME"
