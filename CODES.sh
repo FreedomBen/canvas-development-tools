@@ -214,11 +214,11 @@ installDistroDependencies ()
         sudo dnf -y install postgresql-devel
         sudo dnf -y install postgresql-server
     elif runningUbuntu; then
-        sudo apt-get update
+        sudo apt-get update && sudo apt install software-properties-common && sudo add-apt-repository ppa:brightbox/ruby-ng
         green "Finished running 'apt-get update'.  Installing packages\n"
-        sudo apt-get -y install ruby-dev
+        sudo apt-get -y install ruby2.7
         sudo apt-get -y install zlib1g-dev
-        sudo apt-get -y install rubygems1.9.1
+        sudo apt-get -y install ruby2.7-dev
         sudo apt-get -y install libxml2-dev
         sudo apt-get -y install libxslt1-dev
         sudo apt-get -y install libsqlite3-dev
@@ -241,9 +241,9 @@ installDistroDependencies ()
     elif runningMint; then
         sudo apt-get update
         green "Finished running 'apt-get update'.  Installing packages\n"
-        sudo apt-get -y install ruby-dev
+        sudo apt-get -y install ruby2.7-dev
         sudo apt-get -y install zlib1g-dev
-        sudo apt-get -y install rubygems1.9.1
+        sudo apt-get -y install ruby2.7
         sudo apt-get -y install libxml2-dev
         sudo apt-get -y install libxslt1-dev
         sudo apt-get -y install libsqlite3-dev
@@ -434,9 +434,10 @@ installNodejs ()
         elif runningFedora; then
             sudo dnf -y install nodejs npm
         elif runningUbuntu; then
-            curl -sL https://deb.nodesource.com/setup_6.x | sudo bash -
+            curl -sL https://deb.nodesource.com/setup_16.x | sudo bash -
             sudo apt-get update
             sudo apt-get -y install nodejs
+            sudo npm install -g npm@latest
         elif runningArch; then
             sudo pacman -S --needed --noconfirm nodejs
         elif runningMint; then
